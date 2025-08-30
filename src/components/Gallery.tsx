@@ -20,7 +20,7 @@ const Gallery: React.FC<GalleryProps> = ({ images, onImageClick, selectedImage }
       {images.map((image, index) => (
         <div
           key={index}
-          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 hover:border-indigo-500 ${
+          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 hover:border-indigo-500 ${
             selectedImage === image ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-200'
           }`}
           onClick={() => onImageClick(image)}
