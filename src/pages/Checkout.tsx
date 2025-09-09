@@ -4,12 +4,7 @@ import { useCart } from "../context/CartContext";
 import { ChevronDownIcon } from "@heroicons/react/16/solid";
 import { BASE_URL } from "../config";
 import InputField from "../components/InputField";
-import { ProductResponse } from '../interfaces';
 
-const paymentMethods = [
-	{ id: "credit-card", title: "Credit card" },
-	{ id: "paypal", title: "PayPal" },
-];
 
 interface CartApiItem {
 	id: number;
@@ -61,12 +56,6 @@ export default function Checkout() {
 				console.error(`Error fetching profile: ${err.message}`);
 			}
 		}
-	};
-
-	const setProfileData = (data: Profile) => {
-		// if the profile is empty the user should fill it out
-
-
 	};
 
 	const onRemove = async (itemId: number) => {
