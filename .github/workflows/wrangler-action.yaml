@@ -12,7 +12,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install pnpm
         run: npm install -g pnpm@latest-10
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build
+        run: pnpm run build
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy ./dist
