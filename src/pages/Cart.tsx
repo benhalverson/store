@@ -1,8 +1,10 @@
 import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
+import { BASE_URL } from "../config";
 
 export default function CartPage() {
 	const { cart, removeFromCart, clearCart } = useCart();
+	console.log('Cart:', cart);
 
 	const subtotal = cart.reduce(
 		(sum, item) => sum + item.price * item.quantity,
@@ -23,48 +25,58 @@ export default function CartPage() {
 		);
 	}
 
-	return (
-		<div className="max-w-4xl mx-auto p-6">
-			<h1 className="text-3xl font-bold mb-6">My Cart</h1>
+		return (
+			<div className="max-w-4xl mx-auto p-6">
+				<h1 className="text-3xl font-bold mb-6">My Cart</h1>
 
-			<div className="space-y-6">
-				{cart.map((item) => (
-					<div
-						key={`${item.id}-${item.color}-${item.filamentType}`}
-						className="flex justify-between items-center border-b pb-4"
-					>
-						<div className="flex items-center space-x-4">
-							{item.image && (
-								<img
-									src={item.image}
-									alt={item.name}
-									className="w-16 h-16 object-cover rounded"
-								/>
-							)}
-							<div>
-								<h2 className="font-medium">{item.name}</h2>
-								<p className="text-sm text-gray-500">Color: {item.color}</p>
-								<p className="text-sm text-gray-500">
-									Filament: {item.filamentType}
+				<div className="space-y-6">
+					{cart.map((item) => (
+						<div
+							key={`${item.id}-${item.color}-${item.filamentType}`}
+							className="flex justify-between items-center border-b pb-4"
+						>
+							<div className="flex items-center space-x-4">
+								{item.image && (
+									<img
+										src={item.image}
+										alt={item.name}
+										className="w-16 h-16 object-cover rounded"
+									/>
+								)}
+								<div>
+									<h2 className="font-medium">{item.name}</h2>
+									<p className="text-sm text-gray-500">Color: {item.color}</p>
+									<p className="text-sm text-gray-500">
+										Filament: {item.filamentType}
+									</p>
+									<p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+								</div>
+							</div>
+
+							<div className="text-right">
+								<p className="font-semibold">
+									${(item.price * item.quantity).toFixed(2)}
 								</p>
-								<p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+								<button
+									onClick={async () => {
+										const cartId = localStorage.getItem("cartId");
+										if (!cartId) return;
+															await fetch(`${BASE_URL}/cart/remove`, {
+																method: "DELETE",
+																headers: { "Content-Type": "application/json" },
+																credentials: "include",
+																body: JSON.stringify({ cartId, itemId: item.id })
+															});
+										removeFromCart(item);
+									}}
+									className="text-red-500 text-sm hover:underline mt-2"
+								>
+									Remove
+								</button>
 							</div>
 						</div>
-
-						<div className="text-right">
-							<p className="font-semibold">
-								${(item.price * item.quantity).toFixed(2)}
-							</p>
-							<button
-								onClick={() => removeFromCart(item)}
-								className="text-red-500 text-sm hover:underline mt-2"
-							>
-								Remove
-							</button>
-						</div>
-					</div>
-				))}
-			</div>
+					))}
+				</div>
 
 			<div className="mt-8 pt-6">
 				<div className="flex justify-between text-xl font-semibold">
