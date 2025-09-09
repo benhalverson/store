@@ -1,19 +1,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import toast from "react-hot-toast";
 import { BASE_URL, DOMAIN } from "../config";
+import InputField from "../components/InputField";
+
+// Small internal display component for read-only profile fields
+const Info = ({ label, value }: { label: string; value: string | number | undefined }) => (
+	<div className="flex flex-col">
+		<span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
+		<span className="mt-1 text-sm text-gray-900 dark:text-gray-100 break-words">
+			{value === undefined || value === null || value === "" ? <span className="text-gray-400">—</span> : value}
+		</span>
+	</div>
+);
 
 const Profile = () => {
 	const [profile, setProfile] = useState<Profile | undefined>(undefined);
 	const [authenticators, setAuthenticators] = useState<any[]>([]);
-	const [message, setMessage] = useState<string>("");
+	const [message, setMessage] = useState<string>(""); // kept for passkey flows
+	const [isEditing, setIsEditing] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
+	const [form, setForm] = useState<Partial<Profile>>({});
+	const [error, setError] = useState<string>("");
 
 	const getProfile = async () => {
-		const res = await fetch(`${BASE_URL}/profile`, {
-			credentials: "include",
-		});
-		if (!res.ok) throw new Error("Failed to fetch profile");
-		const data = (await res.json()) as Profile;
-		setProfile(data);
+		try {
+			const res = await fetch(`${BASE_URL}/profile`, {
+				credentials: "include",
+			});
+			if (!res.ok) throw new Error("Failed to fetch profile");
+			const data = (await res.json()) as Profile;
+			setProfile(data);
+			// Initialize form state if not already
+			setForm(data);
+		} catch (e: any) {
+			setError(e.message || "Failed to load profile");
+		}
 	};
 
 	const getAuthenticators = async () => {
@@ -141,44 +163,193 @@ const Profile = () => {
 		getAuthenticators();
 	}, []);
 
+	const handleEditToggle = () => {
+		if (!profile) return;
+		setIsEditing((prev) => !prev);
+		setError("");
+		setMessage("");
+		setForm(profile); // reset to current profile when toggling
+	};
+
+	const handleChange = (
+		e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+	) => {
+		const { name, value } = e.target;
+		setForm((prev) => ({ ...prev, [name]: value }));
+	};
+
+	const handleSubmit = async (e: FormEvent) => {
+		e.preventDefault();
+		if (!profile) return;
+		setIsSaving(true);
+		setError("");
+		setMessage("");
+		// Ensure required shippingAddress is included; fall back to address
+		const payload: Record<string, unknown> = {
+			...profile,
+			...form,
+			shippingAddress: (form as any).shippingAddress || (form as any).address || (profile as any).shippingAddress || profile.address,
+		};
+		const toastId = toast.loading("Saving profile...");
+		try {
+			const res = await fetch(`${BASE_URL}/profile/${profile.id}`, {
+				method: "POST", // per requirement
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify(payload),
+			});
+			if (!res.ok) {
+				let detailsMsg = "Failed to update profile";
+				try {
+					const data: any = await res.json();
+					if (data?.error) detailsMsg = data.error;
+					if (data?.details && Array.isArray(data.details)) {
+						const list = data.details
+							.map((d: any) => d.message || `${d.path?.join('.')}: ${d.code}`)
+							.join("; ");
+						if (list) detailsMsg += `: ${list}`;
+					}
+				} catch (_) {
+					// ignore JSON parse errors, fallback to text
+					const text = await res.text().catch(() => "");
+					if (text) detailsMsg = text;
+				}
+				throw new Error(detailsMsg);
+			}
+			const updated = (await res.json()) as Profile;
+			setProfile(updated);
+			setForm(updated);
+			setIsEditing(false);
+			toast.success("Profile updated", { id: toastId });
+		} catch (err: any) {
+			const msg = err.message || "Update failed";
+			setError(msg);
+			toast.error(msg, { id: toastId });
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
 	return (
-		<div style={{ padding: "1rem" }}>
-			<h2>Profile</h2>
-			{profile ? (
-				<ul>
-					<li>Email: {profile.email}</li>
-					<li>Phone: {profile.phone}</li>
-					<li>First Name: {profile.firstName}</li>
-					<li>Last Name: {profile.lastName}</li>
-					<li>Address: {profile.address}</li>
-					<li>City: {profile.city}</li>
-					<li>State: {profile.state}</li>
-					<li>Zipcode: {profile.zipCode}</li>
-					<li>Country: {profile.country}</li>
-				</ul>
-			) : (
-				<p>Loading profile...</p>
+		<div className="max-w-3xl mx-auto px-4 py-8">
+			<div className="flex items-center justify-between mb-6">
+				<h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Profile</h2>
+				{profile && (
+					<button
+						onClick={handleEditToggle}
+						className="text-sm px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50"
+					>
+						{isEditing ? "Cancel" : "Edit"}
+					</button>
+				)}
+			</div>
+
+			{error && (
+				<div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+					{error}
+				</div>
+			)}
+			{message && !isEditing && (
+				<div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700 border border-green-200">
+					{message}
+				</div>
 			)}
 
-			<h3>Passkeys</h3>
-			{authenticators.length === 0 && <p>No passkeys registered.</p>}
-			<ul>
-				{authenticators.map((auth: any) => (
-					<li key={auth.credentialId}>
-						<span>{auth.credentialId.slice(0, 10)}...</span>
+			{!profile && <p className="text-gray-600">Loading profile...</p>}
+
+			{profile && !isEditing && (
+				<div className="grid gap-4 bg-white dark:bg-gray-900 rounded-lg p-6 shadow border border-gray-200 dark:border-gray-700">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<Info label="Email" value={profile.email} />
+						<Info label="Phone" value={profile.phone} />
+						<Info label="First Name" value={profile.firstName} />
+						<Info label="Last Name" value={profile.lastName} />
+						{(profile as any).shippingAddress && (
+							<Info label="Shipping Address" value={(profile as any).shippingAddress} />
+						)}
+						<Info label="City" value={profile.city} />
+						<Info label="State" value={profile.state} />
+						<Info label="Zip Code" value={profile.zipCode} />
+						<Info label="Country" value={profile.country} />
+					</div>
+				</div>
+			)}
+
+			{profile && isEditing && (
+				<form
+					onSubmit={handleSubmit}
+					className="space-y-6 bg-white dark:bg-gray-900 rounded-lg p-6 shadow border border-gray-200 dark:border-gray-700"
+				>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+						<div className="opacity-70">
+							<InputField
+								id="email"
+								label="Email"
+								value={form.email || ""}
+								onChange={handleChange}
+							/>
+						</div>
+						<InputField id="firstName" label="First Name" value={form.firstName || ""} onChange={handleChange} />
+						<InputField id="lastName" label="Last Name" value={form.lastName || ""} onChange={handleChange} />
+						<InputField id="phone" label="Phone" value={form.phone || ""} onChange={handleChange} />
+						<InputField id="shippingAddress" label="Shipping Address" value={(form as any).shippingAddress || (form as any).address || ""} onChange={handleChange} />
+						<InputField id="city" label="City" value={form.city || ""} onChange={handleChange} />
+						<InputField id="state" label="State" value={form.state || ""} onChange={handleChange} />
+						<InputField id="zipCode" label="Zip Code" value={form.zipCode || ""} onChange={handleChange} />
+						<InputField id="country" label="Country" value={form.country || ""} onChange={handleChange} />
+					</div>
+					<div className="flex gap-4 pt-2">
 						<button
-							onClick={() => handleRemove(auth.credentialId)}
-							style={{ marginLeft: "1rem" }}
+							type="submit"
+							disabled={isSaving}
+							className="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
 						>
-							Remove
+							{isSaving ? "Saving..." : "Save"}
 						</button>
-					</li>
-				))}
-			</ul>
+						<button
+							type="button"
+							onClick={handleEditToggle}
+							disabled={isSaving}
+							className="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+						>
+							Cancel
+						</button>
+					</div>
+				</form>
+			)}
 
-			<button onClick={handleAddPasskey}>Add New Passkey</button>
-
-			{message && <p>{message}</p>}
+			<div className="mt-10">
+				<div className="flex items-center justify-between mb-4">
+					<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Passkeys</h3>
+					<button
+						onClick={handleAddPasskey}
+						className="text-sm px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+					>
+						Add Passkey
+					</button>
+				</div>
+				{authenticators.length === 0 && (
+					<p className="text-sm text-gray-600 dark:text-gray-400">No passkeys registered.</p>
+				)}
+				<ul className="space-y-2">
+					{authenticators.map((auth: any) => (
+						<li
+							key={auth.credentialId}
+							className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800"
+						>
+							<span className="font-mono text-xs text-gray-700 dark:text-gray-300">
+								{auth.credentialId.slice(0, 18)}...
+							</span>
+							<button
+								onClick={() => handleRemove(auth.credentialId)}
+								className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+							>
+								Remove
+							</button>
+						</li>
+					))}
+				</ul>
+			</div>
 		</div>
 	);
 };

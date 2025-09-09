@@ -10,10 +10,10 @@ export interface CartItemsProps  {
 
 export interface CartContextProps {
   cart: CartItem[];
-  addToCart: (item: CartItem) => void;
+  addToCart: (item: CartItem) => Promise<void>;
   removeFromCart: (item: CartItem) => void;
   clearCart: () => void;
-  updateQuantity: (item: CartItem, quantity: number) => void;
+  updateQuantity: (item: CartItem, quantity: number) => Promise<void>;
 }
 
 
@@ -25,5 +25,6 @@ export type CartItem = {
   quantity: number;
   color: string;
   filamentType: string;
+  skuNumber: string; // Needed for remote cart API operations
   // Optionally add more fields as needed
 };
