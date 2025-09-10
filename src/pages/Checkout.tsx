@@ -41,9 +41,7 @@ interface StripeItemsResponse {
 }
 
 interface ShippingCostResponse {
-	cost: number;
-	currency: string;
-	estimated_delivery?: string;
+	shippingCost: number;
 }
 
 export default function Checkout() {
@@ -56,7 +54,6 @@ export default function Checkout() {
 	const [cartError, setCartError] = useState<string | null>(null);
 	const [updatingIdx, setUpdatingIdx] = useState<number | null>(null);
 	const [shippingCost, setShippingCost] = useState<number>(0);
-	const [shippingLoading, setShippingLoading] = useState(false);
 	const [shippingError, setShippingError] = useState<string | null>(null);
 	const [shippingInfo, setShippingInfo] = useState({
 		shippingAddress: '',
@@ -71,6 +68,7 @@ export default function Checkout() {
 				credentials: "include",
 			});
 			const data: Profile = await response.json();
+			setProfile(data);
 			console.log('profile data:', data);
 			setShippingInfo({
 				shippingAddress: data.address|| '',
@@ -111,16 +109,16 @@ export default function Checkout() {
 			const cartId = localStorage.getItem("cartId");
 			if (!cartId) throw new Error("No cartId found");
 			
-			// Fetch regular cart data
+
 			const cartRes = await fetch(`${BASE_URL}/cart/${cartId}`, {
 				credentials: "include",
 			});
 			if (!cartRes.ok) throw new Error(`Failed to fetch cart (${cartRes.status})`);
 			const cartData: CartApiResponse = await cartRes.json();
-			console.log("/cart/{cartId} response", cartData);
+
 			setRemoteCart(cartData.items);
 
-			// Fetch Stripe-formatted items for checkout
+
 			try {
 				const stripeRes = await fetch(`${BASE_URL}/cart/${cartId}/stripe-items`, {
 					credentials: "include",
@@ -147,7 +145,6 @@ export default function Checkout() {
 		const qty = parseInt(e.target.value, 10);
 		setUpdatingIdx(idx);
 		await updateQuantity(product, qty);
-		// Reset shipping cost when cart changes, as it may no longer be accurate
 		setShippingCost(0);
 		setShippingError(null);
 		await fetchRemoteCart();
@@ -161,35 +158,13 @@ export default function Checkout() {
 			method: "GET",
 			credentials: "include",
 		});
-		const data = await response.json();
-		console.log('shipping cost', data.shippingCost);
+		const data: ShippingCostResponse = await response.json();
 		setShippingCost(data.shippingCost);
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		const formData = new FormData(e.currentTarget);
-		// const data = Object.fromEntries(formData.entries());
-		console.log("profile", profile);
-
-		try {
-			const response = await fetch(`${BASE_URL}/profile`, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				// body: JSON.stringify(data),
-				credentials: "include",
-			});
-			if (response.ok) {
-				const updatedProfile = (await response.json()) as Profile;
-				setProfile(updatedProfile);
-			} else {
-				console.error("Failed to update profile");
-			}
-		} catch (err) {
-			console.error("Error updating profile:", err);
-		}
+		console.log("handleSubmit called", profile);
 	};
 
 	useEffect(() => {
@@ -257,15 +232,9 @@ export default function Checkout() {
 							type="button"
 							className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
 							onClick={estimateShippingCost}
-							disabled={shippingLoading}
 						>
-							{shippingLoading ? "Estimating..." : "Estimate Shipping Cost"}
+							Estimate Shipping Cost
 						</button>
-						{shippingCost > 0 && (
-							<div className="mt-2 text-sm text-green-600">
-								Estimated shipping: ${shippingCost.toFixed(2)}
-							</div>
-						)}
 					</div>
 					{/* Order summary */}
 					<div className="mt-10 lg:mt-0">
