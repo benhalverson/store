@@ -23,14 +23,41 @@ interface CartApiResponse {
 	total: number;
 }
 
+interface StripeLineItem {
+	price: string; // Stripe price ID
+	quantity: number;
+	price_data?: {
+		currency: string;
+		product_data: {
+			name: string;
+		};
+		unit_amount: number;
+	};
+}
+
+interface StripeItemsResponse {
+	line_items: StripeLineItem[];
+	total_amount?: number;
+}
+
+interface ShippingCostResponse {
+	cost: number;
+	currency: string;
+	estimated_delivery?: string;
+}
+
 export default function Checkout() {
 	const navigate = useNavigate();
 	const [profile, setProfile] = useState<Profile | undefined>(undefined);
 	const { updateQuantity } = useCart();
 	const [remoteCart, setRemoteCart] = useState<CartApiItem[]>([]);
+	const [stripeItems, setStripeItems] = useState<StripeLineItem[]>([]);
 	const [cartLoading, setCartLoading] = useState(true);
 	const [cartError, setCartError] = useState<string | null>(null);
 	const [updatingIdx, setUpdatingIdx] = useState<number | null>(null);
+	const [shippingCost, setShippingCost] = useState<number>(0);
+	const [shippingLoading, setShippingLoading] = useState(false);
+	const [shippingError, setShippingError] = useState<string | null>(null);
 	const [shippingInfo, setShippingInfo] = useState({
 		shippingAddress: '',
 		shippingCity: '',
@@ -44,6 +71,7 @@ export default function Checkout() {
 				credentials: "include",
 			});
 			const data: Profile = await response.json();
+			console.log('profile data:', data);
 			setShippingInfo({
 				shippingAddress: data.address|| '',
 				shippingCity: data.city || '',
@@ -70,6 +98,9 @@ export default function Checkout() {
 				itemId: itemId,
 			}),
 		});
+		// Reset shipping cost when cart changes
+		setShippingCost(0);
+		setShippingError(null);
 		fetchRemoteCart();
 	};
 
@@ -79,13 +110,31 @@ export default function Checkout() {
 		try {
 			const cartId = localStorage.getItem("cartId");
 			if (!cartId) throw new Error("No cartId found");
-			const res = await fetch(`${BASE_URL}/cart/${cartId}`, {
+			
+			// Fetch regular cart data
+			const cartRes = await fetch(`${BASE_URL}/cart/${cartId}`, {
 				credentials: "include",
 			});
-			if (!res.ok) throw new Error(`Failed to fetch cart (${res.status})`);
-			const data: CartApiResponse = await res.json();
-			console.log("/cart/{cartId} response", data);
-			setRemoteCart(data.items);
+			if (!cartRes.ok) throw new Error(`Failed to fetch cart (${cartRes.status})`);
+			const cartData: CartApiResponse = await cartRes.json();
+			console.log("/cart/{cartId} response", cartData);
+			setRemoteCart(cartData.items);
+
+			// Fetch Stripe-formatted items for checkout
+			try {
+				const stripeRes = await fetch(`${BASE_URL}/cart/${cartId}/stripe-items`, {
+					credentials: "include",
+				});
+				if (stripeRes.ok) {
+					const stripeData: StripeItemsResponse = await stripeRes.json();
+					console.log("/cart/{cartId}/stripe-items response", stripeData);
+					setStripeItems(stripeData.line_items);
+				} else {
+					console.warn("Stripe items not available - some items may not have Stripe price IDs");
+				}
+			} catch (stripeError) {
+				console.warn("Failed to fetch Stripe items:", stripeError);
+			}
 		} catch (e) {
 			setCartError(e instanceof Error ? e.message : "Failed to load cart");
 			setRemoteCart([]);
@@ -98,23 +147,38 @@ export default function Checkout() {
 		const qty = parseInt(e.target.value, 10);
 		setUpdatingIdx(idx);
 		await updateQuantity(product, qty);
+		// Reset shipping cost when cart changes, as it may no longer be accurate
+		setShippingCost(0);
+		setShippingError(null);
 		await fetchRemoteCart();
 		setUpdatingIdx(null);
+	};
+
+	const estimateShippingCost = async () => {
+		const cartId = localStorage.getItem("cartId");
+		
+		const response = await fetch(`${BASE_URL}/cart/shipping?cartId=${cartId}`, {
+			method: "GET",
+			credentials: "include",
+		});
+		const data = await response.json();
+		console.log('shipping cost', data.shippingCost);
+		setShippingCost(data.shippingCost);
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
-		const data = Object.fromEntries(formData.entries());
+		// const data = Object.fromEntries(formData.entries());
 		console.log("profile", profile);
 
 		try {
 			const response = await fetch(`${BASE_URL}/profile`, {
-				method: "POST",
+				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(data),
+				// body: JSON.stringify(data),
 				credentials: "include",
 			});
 			if (response.ok) {
@@ -184,22 +248,24 @@ export default function Checkout() {
 								onChange={e => setShippingInfo(info => ({ ...info, shippingZip: e.target.value }))}
 							/>
 						</div>
+						{shippingError && (
+							<div className="mt-2 text-sm text-red-600">
+								{shippingError}
+							</div>
+						)}
 						<button
 							type="button"
-							className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-							onClick={async() => {
-								const cartId = localStorage.getItem("cartId");
-								
-								const response = await fetch(`${BASE_URL}/cart/shipping?cartId=${cartId}`, {
-									method: "GET",
-									credentials: "include",
-								});
-								const data = await response.json();
-								console.log('data', data);
-							}}
+							className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+							onClick={estimateShippingCost}
+							disabled={shippingLoading}
 						>
-							Estimate Shipping Cost
+							{shippingLoading ? "Estimating..." : "Estimate Shipping Cost"}
 						</button>
+						{shippingCost > 0 && (
+							<div className="mt-2 text-sm text-green-600">
+								Estimated shipping: ${shippingCost.toFixed(2)}
+							</div>
+						)}
 					</div>
 					{/* Order summary */}
 					<div className="mt-10 lg:mt-0">
@@ -282,7 +348,8 @@ export default function Checkout() {
 									(sum, item) => sum + item.price * item.quantity,
 									0
 								);
-								const shipping = validCart.length > 0 ? 5.0 : 0.0;
+								// Use  the response from the shipping cost estimation API if available
+								const shipping = shippingCost;
 								const taxes = +(subtotal * 0.0862).toFixed(2); // Example: 8.62% tax
 								const total = +(subtotal + shipping + taxes).toFixed(2);
 								return (
@@ -299,12 +366,12 @@ export default function Checkout() {
 												${isNaN(shipping) ? "0.00" : shipping.toFixed(2)}
 											</dd>
 										</div>
-										<div className="flex items-center justify-between">
+										{/* <div className="flex items-center justify-between">
 											<dt className="text-sm">Taxes</dt>
 											<dd className="text-sm font-medium text-gray-900">
 												${isNaN(taxes) ? "0.00" : taxes.toFixed(2)}
 											</dd>
-										</div>
+										</div> */}
 										<div className="flex items-center justify-between border-t border-gray-200 pt-6">
 											<dt className="text-base font-medium">Total</dt>
 											<dd className="text-base font-medium text-gray-900">
@@ -321,6 +388,11 @@ export default function Checkout() {
 								>
 									Confirm order
 								</button>
+								{stripeItems.length > 0 && (
+									<p className="mt-2 text-xs text-gray-500 text-center">
+										{stripeItems.length} item(s) ready for Stripe checkout
+									</p>
+								)}
 							</div>
 						</div>
 					</div>
