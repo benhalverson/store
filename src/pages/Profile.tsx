@@ -31,10 +31,10 @@ const Profile = () => {
 			if (!res.ok) throw new Error("Failed to fetch profile");
 			const data = (await res.json()) as Profile;
 			setProfile(data);
-			// Initialize form state if not already
 			setForm(data);
-		} catch (e: any) {
-			setError(e.message || "Failed to load profile");
+		} catch (err: any) {
+			console.log('Error fetching profile:', err);
+			setError(err.message || "Failed to load profile");
 		}
 	};
 
@@ -181,6 +181,7 @@ const Profile = () => {
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!profile) return;
+		console.log("profile", profile);
 		setIsSaving(true);
 		setError("");
 		setMessage("");
@@ -191,6 +192,7 @@ const Profile = () => {
 			shippingAddress: (form as any).shippingAddress || (form as any).address || (profile as any).shippingAddress || profile.address,
 		};
 		const toastId = toast.loading("Saving profile...");
+		
 		try {
 			const res = await fetch(`${BASE_URL}/profile/${profile.id}`, {
 				method: "POST", // per requirement
@@ -198,6 +200,7 @@ const Profile = () => {
 				credentials: "include",
 				body: JSON.stringify(payload),
 			});
+			console.log("profile id", profile.id);
 			if (!res.ok) {
 				let detailsMsg = "Failed to update profile";
 				try {
@@ -209,8 +212,8 @@ const Profile = () => {
 							.join("; ");
 						if (list) detailsMsg += `: ${list}`;
 					}
-				} catch (_) {
-					// ignore JSON parse errors, fallback to text
+				} catch (error) {
+					console.log('Error parsing JSON response:', error);
 					const text = await res.text().catch(() => "");
 					if (text) detailsMsg = text;
 				}
@@ -222,6 +225,7 @@ const Profile = () => {
 			setIsEditing(false);
 			toast.success("Profile updated", { id: toastId });
 		} catch (err: any) {
+			console.error("Error updating profile:", err);
 			const msg = err.message || "Update failed";
 			setError(msg);
 			toast.error(msg, { id: toastId });
@@ -237,7 +241,7 @@ const Profile = () => {
 				{profile && (
 					<button
 						onClick={handleEditToggle}
-						className="text-sm px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50"
+						className="text-sm px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50"
 					>
 						{isEditing ? "Cancel" : "Edit"}
 					</button>
@@ -255,7 +259,7 @@ const Profile = () => {
 				</div>
 			)}
 
-			{!profile && <p className="text-gray-600">Loading profile...</p>}
+			{!profile && <p className="text-gray-600 dark:text-gray-400">Loading profile...</p>}
 
 			{profile && !isEditing && (
 				<div className="grid gap-4 bg-white dark:bg-gray-900 rounded-lg p-6 shadow border border-gray-200 dark:border-gray-700">
