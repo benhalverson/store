@@ -69,7 +69,6 @@ export default function Checkout() {
 			});
 			const data: Profile = await response.json();
 			setProfile(data);
-			console.log('profile data:', data);
 			setShippingInfo({
 				shippingAddress: data.address|| '',
 				shippingCity: data.city || '',
@@ -125,7 +124,6 @@ export default function Checkout() {
 				});
 				if (stripeRes.ok) {
 					const stripeData: StripeItemsResponse = await stripeRes.json();
-					console.log("/cart/{cartId}/stripe-items response", stripeData);
 					setStripeItems(stripeData.line_items);
 				} else {
 					console.warn("Stripe items not available - some items may not have Stripe price IDs");

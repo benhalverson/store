@@ -49,6 +49,8 @@ export function Layout() {
         <div className="flex items-center justify-between">
           <div className="flex gap-4 items-center">
             <Link to="/" className="hover:underline font-semibold">Home</Link>
+            <Link to="/profile" className="hover:underline">Profile</Link>
+            <Link to="/cart" className="hover:underline">Cart</Link>
             {isSignedIn && (
               <button
                 onClick={handleSignOut}

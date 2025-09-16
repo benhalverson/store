@@ -4,7 +4,6 @@ import { BASE_URL } from "../config";
 
 export default function CartPage() {
 	const { cart, removeFromCart, clearCart } = useCart();
-	console.log('Cart:', cart);
 
 	const subtotal = cart.reduce(
 		(sum, item) => sum + item.price * item.quantity,
