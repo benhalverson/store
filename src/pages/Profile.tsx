@@ -33,7 +33,6 @@ const Profile = () => {
 			setProfile(data);
 			setForm(data);
 		} catch (err: any) {
-			console.log('Error fetching profile:', err);
 			setError(err.message || "Failed to load profile");
 		}
 	};
@@ -77,7 +76,6 @@ const Profile = () => {
 			};
 
 			const challengeBase64 = base64ToBase64Url(options.challenge);
-			console.log("DOMAIN", DOMAIN);
 
 			const credential = (await navigator.credentials
 				.create({
@@ -181,7 +179,6 @@ const Profile = () => {
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!profile) return;
-		console.log("profile", profile);
 		setIsSaving(true);
 		setError("");
 		setMessage("");
@@ -195,12 +192,11 @@ const Profile = () => {
 		
 		try {
 			const res = await fetch(`${BASE_URL}/profile/${profile.id}`, {
-				method: "POST", // per requirement
+				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
 				body: JSON.stringify(payload),
 			});
-			console.log("profile id", profile.id);
 			if (!res.ok) {
 				let detailsMsg = "Failed to update profile";
 				try {

@@ -9,7 +9,6 @@ const TAB_ID = Math.random().toString(36).slice(2);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>(() => {
     const storedCart = localStorage.getItem("cart");
-    console.log('storedCart', storedCart);
     try {
       const parsedCart = storedCart ? JSON.parse(storedCart) : [];
       return Array.isArray(parsedCart) ? parsedCart.filter(Boolean) : [];
@@ -223,8 +222,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = async (itemToUpdate: CartItem, quantity: number) => {
-    console.log('updateQuantity called with', itemToUpdate, quantity);
-    // Clamp quantity minimum 1
     const newQty = Math.max(1, quantity);
     let previous: CartItem[] = [];
     setCart((prev) => {

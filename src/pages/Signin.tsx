@@ -105,7 +105,6 @@ const Signin = () => {
 				publicKey: options,
 			})) as PublicKeyCredential | null;
 
-			console.log('credential', credential);
 
 			if (!credential) throw new Error("User cancelled passkey login");
 
@@ -128,15 +127,12 @@ const Signin = () => {
 				},
 			};
 
-			console.log('payload', payload);
-
 			const finishRes = await fetch(`${BASE_URL}/webauthn/auth/finish`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
 				body: JSON.stringify(payload),
 			});
-			console.log('finishRes', finishRes);
 
 			if (!finishRes.ok) {
 				const result = (await finishRes.json()) as { error?: string };
