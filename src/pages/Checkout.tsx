@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { ChevronDownIcon } from "@heroicons/react/16/solid";
-import { BASE_URL } from "../config";
+import { BASE_URL, DOMAIN } from "../config";
 import InputField from "../components/InputField";
+import { getStripe } from "../utils/stripe";
 
 
 interface CartApiItem {
@@ -162,7 +163,76 @@ export default function Checkout() {
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		console.log("handleSubmit called", profile);
+		// Basic guard
+		const cartId = localStorage.getItem("cartId");
+		if (!cartId) {
+			setCartError("Missing cart ID");
+			return;
+		}
+		if (!stripeItems.length) {
+			setCartError("No Stripe line items available.");
+			return;
+		}
+		try {
+			// Optionally persist shipping info before checkout
+			try {
+				await fetch(`${BASE_URL}/profile`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					credentials: 'include',
+					body: JSON.stringify({
+						address: shippingInfo.shippingAddress,
+						city: shippingInfo.shippingCity,
+						state: shippingInfo.shippingState,
+						zipCode: shippingInfo.shippingZip,
+					}),
+				});
+			} catch (err) {
+				console.warn('Failed to persist shipping info (non-blocking)', err);
+			}
+
+			// Create a Checkout Session using your backend
+			const sessionRes = await fetch(`${BASE_URL}/cart/${cartId}/create-checkout-session`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({
+					// If backend expects line items, pass them; otherwise it can reconstruct from cartId
+					line_items: stripeItems.map(li => ({ price: li.price, quantity: li.quantity })),
+					success_url: `${DOMAIN}/checkout/success`,
+					cancel_url: `${DOMAIN}/checkout/cancel`,
+					shipping: {
+						address: shippingInfo.shippingAddress,
+						city: shippingInfo.shippingCity,
+						state: shippingInfo.shippingState,
+						zip: shippingInfo.shippingZip,
+					},
+				}),
+			});
+			if (!sessionRes.ok) {
+				const text = await sessionRes.text();
+				throw new Error(`Failed to create checkout session: ${sessionRes.status} ${text}`);
+			}
+			const { id: sessionId, url } = await sessionRes.json();
+
+			// Prefer server returning a URL we can just redirect to (Stripe best practice), else use stripe.redirectToCheckout
+			if (url) {
+				window.location.href = url;
+				return;
+			}
+			const stripe = await getStripe();
+			if (!stripe) throw new Error('Stripe failed to load');
+			const { error } = await stripe.redirectToCheckout({ sessionId });
+			if (error) {
+				setCartError(error.message || 'Stripe redirect failed');
+			}
+		} catch (err) {
+			if (err instanceof Error) {
+				setCartError(err.message);
+			} else {
+				setCartError('Unexpected error starting checkout');
+			}
+		}
 	};
 
 	useEffect(() => {
