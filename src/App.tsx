@@ -9,34 +9,35 @@ import Signin from "./pages/Signin";
 import { Layout } from "./components/Layout";
 import Cart from "./pages/Cart";
 import { CartProvider } from "./context/CartContext";
-import Checkout from './pages/Checkout';
-import SearchResults from './pages/SearchResults';
+import Checkout from "./pages/Checkout";
+import SearchResults from "./pages/SearchResults";
+import { AuthProvider } from "./context/AuthContext";
 
 function App() {
-	return (
-		<>
-			<CartProvider>
-				<ColorProvider>
-					<Toaster position="top-right" />
-					<Routes>
-						{/* Set ProductList as the default page */}
-						<Route path="/" element={<Layout />}>
-							<Route index element={<ProductList />} />
-							<Route path="search" element={<SearchResults />} />
-							<Route path="signup" element={<Signup />} />
-							<Route path="signin" element={<Signin />} />
-							<Route path="profile" element={<Profile />} />
-							<Route path="/cart" element={<Cart />} />
-							<Route path="/checkout" element={<Checkout/>} />
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <ColorProvider>
+          <Toaster position="top-right" />
+          <Routes>
+            {/* Set ProductList as the default page */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<ProductList />} />
+              <Route path="search" element={<SearchResults />} />
+              <Route path="signup" element={<Signup />} />
+              <Route path="signin" element={<Signin />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
 
-							{/* Route to ProductPage with a dynamic product ID */}
-							<Route path="product/:id" element={<ProductPage />} />
-						</Route>
-					</Routes>
-				</ColorProvider>
-			</CartProvider>
-		</>
-	);
+              {/* Route to ProductPage with a dynamic product ID */}
+              <Route path="product/:id" element={<ProductPage />} />
+            </Route>
+          </Routes>
+        </ColorProvider>
+      </CartProvider>
+    </AuthProvider>
+  );
 }
 
 export default App;
