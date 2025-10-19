@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         credentials: "include",
       });
       if (res.ok) {
-        const data = await res.json();
+        const data: any = await res.json();
         setUser(data);
       } else {
         setUser(null);
