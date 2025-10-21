@@ -6,19 +6,16 @@ import { vi } from "vitest";
 import { Suspense } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
-// ✅ Make BASE_URL stable in tests
 // Ensure BASE_URL/DOMAIN never point to real endpoints in tests
 vi.mock("../config", () => ({
   BASE_URL: "http://test.local",
   DOMAIN: "http://test.local",
 }));
 
-// ✅ Mock lazy-loaded component (works with React.lazy)
 vi.mock("../components/PreviewComponent", () => ({
   default: () => <div data-testid="preview-component">Preview Component</div>,
 }));
 
-// ✅ Mock any component that might attach image onLoad handlers / do layout
 vi.mock("../components/Gallery", () => ({
   default: ({ images, onImageClick }: { images: string[]; onImageClick: (i: number) => void }) => (
     <div data-testid="gallery">
@@ -31,7 +28,6 @@ vi.mock("../components/Gallery", () => ({
   ),
 }));
 
-// ✅ Mock components
 vi.mock("../components/ColorPicker", () => ({
   default: ({ filamentType }: { filamentType: string }) => (
     <div data-testid="color-picker">Color Picker for {filamentType}</div>
@@ -57,7 +53,6 @@ vi.mock("../components/FilamentDropdown", () => ({
   ),
 }));
 
-// ✅ Mock context hooks so we don't need real providers
 vi.mock("../context/CartContext", () => ({
   useCart: () => ({
     cart: [],
@@ -114,7 +109,6 @@ describe("ProductPage", () => {
 
     render(<RouterProvider router={router} future={{ v7_startTransition: true }} />);
 
-    // ✅ Make sure the product finished loading before tests run
     await waitForElementToBeRemoved(() => screen.queryByText(/Loading product/i));
     await screen.findByText("RC Wheels");
   });
@@ -143,7 +137,7 @@ describe("ProductPage", () => {
     expect(filamentDropdown).toHaveValue("PLA");
   });
 
-it.skip("updates filament selection when dropdown value changes", async () => {
+it("updates filament selection when dropdown value changes", async () => {
   const user = userEvent.setup();
 
   // Make sure the product is fully loaded in THIS test's async turn
