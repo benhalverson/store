@@ -85,7 +85,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({ url, onExceedsLimit
   // If imageUrl is provided, show the image instead of 3D model
   if (imageUrl) {
     return (
-      <div className="flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center">
         <div className="w-full max-w-[600px] h-[400px] bg-gray-100 rounded-lg overflow-hidden">
           <img
             src={imageUrl}
@@ -98,7 +98,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({ url, onExceedsLimit
   }
 
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center">
       <Canvas
         style={{ width: "600px", height: "400px" }}
         camera={{ fov: 50, position: [0, 0, 170] }}

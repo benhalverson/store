@@ -15,7 +15,7 @@ export default function ProductPage() {
 	const { dispatch, state } = useColorContext();
 	const {  cart, addToCart } = useCart();
 	const [quantity, setQuantity] = useState(1);
-	const [selectedImage, setSelectedImage] = useState<string | null>(null);
+	const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
 	const { id } = useParams<{ id: string }>();
 	const [product, setProduct] = useState<Product | undefined>(undefined);
@@ -102,13 +102,13 @@ export default function ProductPage() {
 					<div className="mt-8 lg:col-span-7 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:mt-0">
 						<h2 className="sr-only">Images</h2>
 
-						<div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-3 lg:gap-8">
-							<div className="lg:col-span-2 lg:row-span-2">
+						<div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-4">
+							<div className="lg:col-span-2">
 								<Suspense fallback={<div data-id="loading">Loading...</div>}>
 									<PreviewComponent
 										color={product.color}
 										url={product.stl}
-										imageUrl={selectedImage || undefined}
+										imageUrl={selectedIndex !== null ? product.imageGallery[selectedIndex] : undefined}
 										onExceedsLimit={() => false}
 										onError={() => (
 											<div>
@@ -117,10 +117,10 @@ export default function ProductPage() {
 										)}
 									/>
 								</Suspense>
-								{selectedImage && (
+								{selectedIndex !== null && (
 									<div className="mt-2 text-center">
 										<button
-											onClick={() => setSelectedImage(null)}
+											onClick={() => setSelectedIndex(null)}
 											className="text-sm text-indigo-600 hover:text-indigo-500 underline"
 										>
 											View 3D Model
@@ -128,11 +128,11 @@ export default function ProductPage() {
 									</div>
 								)}
 							</div>
-							<div className="lg:col-span-2 lg:row-span-1">
+							<div className="lg:col-span-2">
 								<Gallery
 									images={product.imageGallery}
-									onImageClick={setSelectedImage}
-									selectedImage={selectedImage || ''}
+									onImageClick={setSelectedIndex}
+									selectedIndex={selectedIndex ?? undefined}
 								/>
 							</div>
 						</div>
