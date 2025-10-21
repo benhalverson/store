@@ -7,7 +7,11 @@ import { Suspense } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
 // ✅ Make BASE_URL stable in tests
-vi.mock("../config", () => ({ BASE_URL: "https://example.test" }));
+// Ensure BASE_URL/DOMAIN never point to real endpoints in tests
+vi.mock("../config", () => ({
+  BASE_URL: "http://test.local",
+  DOMAIN: "http://test.local",
+}));
 
 // ✅ Mock lazy-loaded component (works with React.lazy)
 vi.mock("../components/PreviewComponent", () => ({
