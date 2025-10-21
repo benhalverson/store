@@ -1,13 +1,13 @@
-name: Deploy
+name: Tests
 on:
   push:
     branches:
-      - main
+      - '*'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy
+    name: tests
     steps:
       - uses: actions/checkout@v4
       - name: Install pnpm
@@ -16,8 +16,6 @@ jobs:
         run: pnpm install
       - name: Build
         run: pnpm run build
-      - name: Deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy ./dist
+      - name: tests
+        run: pnpm run test
+        
