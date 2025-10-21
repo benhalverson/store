@@ -16,28 +16,30 @@ const Gallery: React.FC<GalleryProps> = ({ images, onImageClick, selectedIndex }
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
-      {images.map((src, index) => {
-        return (
-        <div
-          key={`${src}-${index}`}
-          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 hover:border-indigo-500 ${
-            selectedIndex === index ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-200'
-          }`}
-          onClick={() => onImageClick(index)}
-        >
-          <img
-            src={src}
-            alt={`Product view ${index + 1}`}
-            className="w-full h-24 lg:h-28 object-cover transition-transform duration-200 hover:scale-105"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-        );
-      })}
-    </div>
-  );
+		<div className="flex flex-row gap-4 justify-center mt-4">
+			{images.map((src, index) => {
+				return (
+					<div
+						key={`${src}-${index}`}
+						className={`relative cursor-pointer rounded-lg overflow-hidden border-2 hover:border-indigo-500 ${
+							selectedIndex === index
+								? "border-indigo-500 ring-2 ring-indigo-200"
+								: "border-gray-200"
+						}`}
+						onClick={() => onImageClick(index)}
+					>
+						<img
+							src={src}
+							alt={`Product view ${index + 1}`}
+							className="w-full h-24 lg:h-28 object-cover transition-transform duration-200 hover:scale-105"
+							loading="lazy"
+							decoding="async"
+						/>
+					</div>
+				);
+			})}
+		</div>
+	);
 };
 
 export default Gallery;
