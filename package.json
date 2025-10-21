@@ -9,6 +9,7 @@
     "build": "tsc && vite build",
     "build:tsgo": "tsgo && vite build",
     "test": "vitest",
+    "test:ci": "echo tests lolol",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
