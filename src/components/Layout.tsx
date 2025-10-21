@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 
 export function Layout() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -15,6 +15,7 @@ export function Layout() {
       });
 
       if (res.ok) {
+        setUser(null);
         // loading(false);
         navigate("/signin");
       }
