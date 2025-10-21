@@ -12,224 +12,233 @@ import { useCart } from "../context/CartContext";
 const PreviewComponent = lazy(() => import("../components/PreviewComponent"));
 
 export default function ProductPage() {
-	const { dispatch, state } = useColorContext();
-	const {  cart, addToCart } = useCart();
-	const [quantity, setQuantity] = useState(1);
-	const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const { dispatch, state } = useColorContext();
+  const { cart, addToCart } = useCart();
+  const [quantity, setQuantity] = useState(1);
 
-	const { id } = useParams<{ id: string }>();
-	const [product, setProduct] = useState<Product | undefined>(undefined);
-	const [selectedFilament, setSelectedFilament] = useState<string>("PLA");
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
+    null
+  );
 
-	// Fetch product data based on ID
-	useEffect(() => {
-		const fetchProduct = async () => {
-			try {
-				const response = await fetch(`${BASE_URL}/product/${id}`);
-				const data = (await response.json()) as Product;
-				setProduct(data);
+  const { id } = useParams<{ id: string }>();
+  const [product, setProduct] = useState<Product | undefined>(undefined);
+  const [selectedFilament, setSelectedFilament] = useState<string>("PLA");
 
-				if (data.color) {
-					dispatch({ type: "SET_INITIAL_COLOR", payload: data.color });
-				}
-			} catch (error) {
-				console.error("Error fetching product:", error);
-			}
-		};
+  // Fetch product data based on ID
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/product/${id}`);
+        const data = (await response.json()) as Product;
+        setProduct(data);
 
-		if (id) fetchProduct();
-	}, [id, dispatch]);
+        if (data.color) {
+          dispatch({ type: "SET_INITIAL_COLOR", payload: data.color });
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      }
+    };
 
-	if (!product) return <div>Loading product...</div>;
+    if (id) fetchProduct();
+  }, [id, dispatch]);
 
-	return (
-		<div className="bg-white">
-			<header className="relative bg-white">
-				<nav
-					aria-label="Top"
-					className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
-				>
-					<div className="border-b border-gray-200">
-						<div className="flex h-16 items-center justify-between">
-							{/* Logo */}
-							<a href="#" className="flex">
-								<span className="sr-only">RC stuff</span>
-								RC Stuff
-							</a>
+  if (!product) return <div>Loading product...</div>;
 
-							<div className="flex flex-1 items-center justify-end">
-								{/* Account */}
-								<a
-									href="#"
-									className="p-2 text-gray-400 hover:text-gray-500 lg:ml-4"
-								>
-									<span className="sr-only">Account</span>
-									<UserIcon aria-hidden="true" className="h-6 w-6" />
-								</a>
+  const selectedImageUrl =
+    selectedImageIndex !== null
+      ? product.imageGallery[selectedImageIndex]
+      : null;
 
-								{/* Cart */}
-								<div className="ml-4 flow-root lg:ml-6">
-									<Link to="/cart" className="group -m-2 flex items-center p-2">
-										<ShoppingBagIcon
-											aria-hidden="true"
-											className="h-6 w-6 flex-shrink-0 text-gray-400 group-hover:text-gray-500"
-										/>
-										<span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-800">
-											{cart.length}
-										</span>
-										<span className="sr-only">items in cart, view bag</span>
-									</Link>
-								</div>
-							</div>
-						</div>
-					</div>
-				</nav>
-			</header>
+  return (
+    <div className="bg-white">
+      <header className="relative bg-white">
+        <nav
+          aria-label="Top"
+          className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+        >
+          <div className="border-b border-gray-200">
+            <div className="flex h-16 items-center justify-between">
+              <a href="#" className="flex">
+                <span className="sr-only">RC stuff</span>
+                RC Stuff
+              </a>
 
-			<main className="mx-auto mt-8 max-w-2xl px-4 pb-16 sm:px-6 sm:pb-24 lg:max-w-7xl lg:px-8">
-				<div className="lg:grid lg:auto-rows-min lg:grid-cols-12 lg:gap-x-8">
-					<div className="lg:col-span-5 lg:col-start-8">
-						<div className="flex justify-between">
-							<h1 className="text-xl font-medium text-gray-900">
-								{product.name}
-							</h1>
-							<p className="text-xl font-medium text-gray-900">
-								${product.price}
-							</p>
-						</div>
-					</div>
+              <div className="flex flex-1 items-center justify-end">
+                <a
+                  href="#"
+                  className="p-2 text-gray-400 hover:text-gray-500 lg:ml-4"
+                >
+                  <span className="sr-only">Account</span>
+                  <UserIcon aria-hidden="true" className="h-6 w-6" />
+                </a>
 
-					<div className="mt-8 lg:col-span-7 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:mt-0">
-						<h2 className="sr-only">Images</h2>
+                <div className="ml-4 flow-root lg:ml-6">
+                  <Link to="/cart" className="group -m-2 flex items-center p-2">
+                    <ShoppingBagIcon
+                      aria-hidden="true"
+                      className="h-6 w-6 flex-shrink-0 text-gray-400 group-hover:text-gray-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-800">
+                      {cart.length}
+                    </span>
+                    <span className="sr-only">items in cart, view bag</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </header>
 
-						<div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-3 lg:gap-8">
-							<div className="lg:col-span-2 lg:row-span-2">
-								<Suspense fallback={<div data-id="loading">Loading...</div>}>
-									<PreviewComponent
-										color={product.color}
-										url={product.stl}
-										imageUrl={selectedImage || undefined}
-										onExceedsLimit={() => false}
-										onError={() => (
-											<div>
-												<p>There was an error loading the model</p>
-											</div>
-										)}
-									/>
-								</Suspense>
-								{selectedImage && (
-									<div className="mt-2 text-center">
-										<button
-											onClick={() => setSelectedImage(null)}
-											className="text-sm text-indigo-600 hover:text-indigo-500 underline"
-										>
-											View 3D Model
-										</button>
-									</div>
-								)}
-							</div>
-							<div className="lg:col-span-2 lg:row-span-1">
-								<Gallery
-									images={product.imageGallery}
-									onImageClick={setSelectedImage}
-									selectedImage={selectedImage || ''}
-								/>
-							</div>
-						</div>
-					</div>
+      <main className="mx-auto mt-8 max-w-2xl px-4 pb-16 sm:px-6 sm:pb-24 lg:max-w-7xl lg:px-8">
+        <div className="lg:grid lg:auto-rows-min lg:grid-cols-12 lg:gap-x-8">
+          {/* Title + Price */}
+          <div className="lg:col-span-5 lg:col-start-8">
+            <div className="flex justify-between">
+              <h1 className="text-xl font-medium text-gray-900">
+                {product.name}
+              </h1>
+              <p className="text-xl font-medium text-gray-900">
+                ${product.price}
+              </p>
+            </div>
+          </div>
 
-					<div className="mt-8 lg:col-span-5">
-						<form>
-							<div>
-								<h2 className="text-sm font-medium text-gray-900">
-									Filament Selection
-								</h2>
-								<FilamentDropdown
-									selectedFilament={selectedFilament}
-									setSelectedFilament={setSelectedFilament}
-								/>
-							</div>
-							<div>
-								<h2 className="text-sm font-medium text-gray-900">Color</h2>
-								<ColorPicker filamentType={selectedFilament} />
-								<div className="mt-4">
-									<h2 className="text-sm font-medium text-gray-900">
-										Quantity
-									</h2>
-									<div>
-										<input
-											type="number"
-											value={quantity}
-											onChange={(e) =>
-												setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-											}
-										/>
-										
-										<button
-											type="button"
-											onClick={() => setQuantity((qty) => Math.max(1, qty - 1))}
-											className="px-3 py-1 border rounded-r bg-gray-200 hover:bg-gray-300"
-										>
-											-
-										</button>
-										<button
-											type="button"
-											onClick={() => setQuantity((qty) => qty + 1)}
-											className="px-3 py-1 border rounded-r bg-gray-200 hover:bg-gray-300"
-										>
-											+
-										</button>
-									</div>
-								</div>
-							</div>
+          {/* Gallery + 3D Preview */}
+          <div className="mt-8 lg:col-span-7 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-4 items-start">
+              <div className="lg:col-span-2 lg:row-span-2">
+                <Suspense fallback={<div>Loading 3D Model...</div>}>
+                  <PreviewComponent
+                    color={product.color}
+                    url={product.stl}
+                    imageUrl={selectedImageUrl || undefined}
+                    onExceedsLimit={() => false}
+                    onError={() => (
+                      <div>
+                        <p>Error loading model</p>
+                      </div>
+                    )}
+                  />
+                </Suspense>
 
-							<button
-								type="button"
-								onClick={() =>
-									addToCart({
-										id: Number(id),
-										name: product.name,
-										price: product.price,
-										color: state.color,
-										quantity,
-										filamentType: selectedFilament,
-										image: product.image,
-										skuNumber: product.skuNumber,
-									})
-								}
-								className="mt-8 flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-							>
-								Add to cart
-							</button>
-						</form>
+                {selectedImageUrl && (
+                  <div className="mt-2 text-center">
+                    <button
+                      onClick={() => setSelectedImageIndex(null)}
+                      className="text-sm text-indigo-600 hover:text-indigo-500 underline"
+                    >
+                      View 3D Model
+                    </button>
+                  </div>
+                )}
+              </div>
 
-						{/* Product details */}
-						<div className="mt-10">
-							<h2 className="text-sm font-medium text-gray-900">Description</h2>
+              <div className="lg:col-span-2 lg:row-span-1">
+                <Gallery
+                  images={product.imageGallery}
+                  onImageClick={setSelectedImageIndex}
+                  selectedImageIndex={selectedImageIndex}
+                />
+              </div>
+            </div>
+          </div>
 
-							<div
-								dangerouslySetInnerHTML={{ __html: product.description }}
-								className="prose prose-sm mt-4 text-gray-500"
-							/>
-						</div>
-					</div>
-				</div>
-			</main>
-		</div>
-	);
+          {/* Product Options + Add to Cart */}
+          <div className="mt-8 lg:col-span-5">
+            <form>
+              <div>
+                <h2 className="text-sm font-medium text-gray-900">
+                  Filament Selection
+                </h2>
+                <FilamentDropdown
+                  selectedFilament={selectedFilament}
+                  setSelectedFilament={setSelectedFilament}
+                />
+              </div>
+
+              <div>
+                <h2 className="text-sm font-medium text-gray-900 mt-4">
+                  Color
+                </h2>
+                <ColorPicker filamentType={selectedFilament} />
+              </div>
+
+              <div className="mt-4">
+                <h2 className="text-sm font-medium text-gray-900">Quantity</h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((qty) => Math.max(1, qty - 1))}
+                    className="px-3 py-1 border rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    className="w-16 text-center border rounded"
+                    value={quantity}
+                    onChange={(e) =>
+                      setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((qty) => qty + 1)}
+                    className="px-3 py-1 border rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  addToCart({
+                    id: Number(id),
+                    name: product.name,
+                    price: product.price,
+                    color: state.color,
+                    quantity,
+                    filamentType: selectedFilament,
+                    image: product.image,
+                    skuNumber: product.skuNumber,
+                  })
+                }
+                className="mt-8 flex w-full items-center justify-center rounded-md bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none"
+              >
+                Add to cart
+              </button>
+            </form>
+
+            {/* Description */}
+            <div className="mt-10">
+              <h2 className="text-sm font-medium text-gray-900">Description</h2>
+              <div
+                className="prose prose-sm mt-4 text-gray-500"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 interface Product {
-	id: number;
-	name: string;
-	description: string;
-	image: string;
-	imageGallery: string[];
-	stl: string;
-	price: number;
-	filamentType: string;
-	skuNumber: string;
-	color: string;
-	stripeProductId?: string;
-	stripePriceId?: string;
+  id: number;
+  name: string;
+  description: string;
+  image: string;
+  imageGallery: string[];
+  stl: string;
+  price: number;
+  filamentType: string;
+  skuNumber: string;
+  color: string;
+  stripeProductId?: string;
+  stripePriceId?: string;
 }
