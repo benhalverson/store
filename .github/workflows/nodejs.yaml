@@ -16,23 +16,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      
+
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
+          cache: 'pnpm'
 
       - name: Install Node.js dependencies
-        run: npm ci
+        run: pnpm i
 
       - name: 
-        run: npm test
+        run: pnpm test
 
-      - name: Build Project
-        run: npm run build # Ensure this outputs to the `dist` directory
-
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifact
-          path: dist
