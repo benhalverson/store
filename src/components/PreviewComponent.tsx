@@ -1,6 +1,5 @@
-// PreviewComponent.tsx
 import React, { useEffect, useState } from "react";
-import { Canvas, useLoader, useThree } from "@react-three/fiber";
+import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useColorContext } from "../context/ColorContext";
 import * as THREE from "three";
@@ -13,7 +12,7 @@ interface PreviewComponentProps {
   url: string;
   onExceedsLimit: (limit: boolean) => void;
   onError: (error: string) => void;
-  imageUrl?: string;
+  imageUrl?: string; // Optional image URL for photo display
 }
 
 interface ModelProps {
@@ -21,10 +20,9 @@ interface ModelProps {
   color: number;
   onExceedsLimit: (limit: boolean) => void;
   onError: (error: string) => void;
-  onHoverDimensions?: (
-    dims: { width?: number; height?: number; depth?: number } | null,
-    position?: { x: number; y: number }
-  ) => void;
+  onHoverDimensions: (
+    dimensions: { width: number; height: number; depth: number } | null
+  ) => void; // ✅ Added
 }
 
 const Model: React.FC<ModelProps> = ({
@@ -32,26 +30,25 @@ const Model: React.FC<ModelProps> = ({
   color,
   onExceedsLimit,
   onError,
-  onHoverDimensions,
+  onHoverDimensions, // ✅ Added
 }) => {
   const geometry = useLoader(STLLoader, url);
-  const { camera, size: canvasSize } = useThree();
-  const [size, setSize] = useState<THREE.Vector3 | null>(null);
 
   useEffect(() => {
     if (geometry) {
       geometry.computeBoundingBox();
-      const modelSize = geometry.boundingBox?.getSize(new THREE.Vector3());
+      const size = geometry.boundingBox?.getSize(new THREE.Vector3());
       const center = geometry.boundingBox?.getCenter(new THREE.Vector3());
 
-      if (center) geometry.translate(-center.x, -center.y, -center.z);
+      if (center) {
+        geometry.translate(-center.x, -center.y, -center.z); // Center the model
+      }
 
-      if (modelSize) {
-        setSize(modelSize);
+      if (size) {
         const modelExceedsLimit =
-          modelSize.x > LIMIT_DIMENSIONS_MM.length ||
-          modelSize.y > LIMIT_DIMENSIONS_MM.width ||
-          modelSize.z > LIMIT_DIMENSIONS_MM.height;
+          size.x > LIMIT_DIMENSIONS_MM.length ||
+          size.y > LIMIT_DIMENSIONS_MM.width ||
+          size.z > LIMIT_DIMENSIONS_MM.height;
 
         onExceedsLimit(modelExceedsLimit);
 
@@ -63,65 +60,32 @@ const Model: React.FC<ModelProps> = ({
       }
     }
 
-    return () => geometry.dispose();
-  }, [geometry, onExceedsLimit, onError]);
-
-  if (!size) return null;
-
-  // Convert 3D world coordinates to 2D screen coords
-  const getScreenPosition = (point: THREE.Vector3) => {
-    const vector = point.clone().project(camera);
-    return {
-      x: ((vector.x + 1) / 2) * canvasSize.width,
-      y: ((-vector.y + 1) / 2) * canvasSize.height,
+    return () => {
+      geometry.dispose();
     };
-  };
-
-  const handlePointer = (
-    dims: { width?: number; height?: number; depth?: number },
-    e: any
-  ) => {
-    const pos = getScreenPosition(e.point);
-    onHoverDimensions?.(dims, pos);
-  };
+  }, [geometry, onExceedsLimit, onError]);
 
   return (
     <mesh
       geometry={geometry}
       rotation={[-Math.PI / 2, 0, Math.PI]}
       position={[0, 0, 0]}
+      // ✅ Added hover events
+      onPointerOver={() => {
+        if (geometry.boundingBox && onHoverDimensions) {
+          const size = geometry.boundingBox.getSize(new THREE.Vector3());
+          onHoverDimensions({
+            width: size.x,
+            height: size.z, // height along Z-axis
+            depth: size.y,
+          });
+        }
+      }}
+      onPointerOut={() => {
+        if (onHoverDimensions) onHoverDimensions(null);
+      }}
     >
       <meshStandardMaterial color={color} />
-
-      {/* Width helper */}
-      <mesh
-        position={[size.x / 2, 0, 0]}
-        visible={false}
-        onPointerMove={(e) => handlePointer({ width: size.x }, e)}
-        onPointerOut={() => onHoverDimensions?.(null)}
-      >
-        <boxGeometry args={[0.1, size.y, size.z]} />
-      </mesh>
-
-      {/* Depth helper */}
-      <mesh
-        position={[0, size.y / 2, 0]}
-        visible={false}
-        onPointerMove={(e) => handlePointer({ depth: size.y }, e)}
-        onPointerOut={() => onHoverDimensions?.(null)}
-      >
-        <boxGeometry args={[size.x, 0.1, size.z]} />
-      </mesh>
-
-      {/* Height helper */}
-      <mesh
-        position={[0, 0, size.z / 2]}
-        visible={false}
-        onPointerMove={(e) => handlePointer({ height: size.z }, e)}
-        onPointerOut={() => onHoverDimensions?.(null)}
-      >
-        <boxGeometry args={[size.x, size.y, 0.1]} />
-      </mesh>
     </mesh>
   );
 };
@@ -135,18 +99,20 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   const { state } = useColorContext();
   const { color } = state;
 
+  // ✅ Added: hover dimensions state
   const [hoveredDimensions, setHoveredDimensions] = useState<{
-    dims?: { width?: number; height?: number; depth?: number };
-    position?: { x: number; y: number };
+    width: number;
+    height: number;
+    depth: number;
   } | null>(null);
 
-  const handleHoverDimensions = (
-    dims: { width?: number; height?: number; depth?: number } | null,
-    position?: { x: number; y: number }
-  ) => {
-    if (dims && position) setHoveredDimensions({ dims, position });
-    else setHoveredDimensions(null);
-  };
+  useEffect(() => {
+    const handleResize = () => {};
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   if (imageUrl) {
     return (
@@ -163,7 +129,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   }
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="flex flex-col items-center relative">
       <Canvas
         style={{ width: "600px", height: "400px" }}
         camera={{ fov: 50, position: [0, 0, 170] }}
@@ -178,39 +144,19 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
             color={parseInt(color.replace("#", ""), 16)}
             onExceedsLimit={onExceedsLimit}
             onError={onError}
-            onHoverDimensions={handleHoverDimensions}
+            onHoverDimensions={setHoveredDimensions} // ✅ Added
           />
         )}
       </Canvas>
 
-      {hoveredDimensions &&
-        hoveredDimensions.position &&
-        hoveredDimensions.dims && (
-          <div
-            style={{
-              position: "absolute",
-              top: hoveredDimensions.position.y,
-              left: hoveredDimensions.position.x,
-              transform: "translate(10px, 10px)",
-              backgroundColor: "rgba(255,255,255,0.9)",
-              padding: "6px 10px",
-              borderRadius: "8px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-              pointerEvents: "none",
-              zIndex: 9999,
-            }}
-          >
-            {hoveredDimensions.dims.width && (
-              <p>Width: {hoveredDimensions.dims.width.toFixed(1)} mm</p>
-            )}
-            {hoveredDimensions.dims.height && (
-              <p>Height: {hoveredDimensions.dims.height.toFixed(1)} mm</p>
-            )}
-            {hoveredDimensions.dims.depth && (
-              <p>Depth: {hoveredDimensions.dims.depth.toFixed(1)} mm</p>
-            )}
-          </div>
-        )}
+      {/* ✅ Added: show dimensions tooltip on hover */}
+      {hoveredDimensions && (
+        <div className="absolute top-2 right-2 bg-white p-2 rounded shadow z-50 text-sm">
+          <p>Width: {hoveredDimensions.width.toFixed(1)} mm</p>
+          <p>Height: {hoveredDimensions.height.toFixed(1)} mm</p>
+          <p>Depth: {hoveredDimensions.depth.toFixed(1)} mm</p>
+        </div>
+      )}
     </div>
   );
 };
