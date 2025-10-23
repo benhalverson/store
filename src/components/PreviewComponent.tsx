@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useColorContext } from "../context/ColorContext";
@@ -20,9 +20,18 @@ interface ModelProps {
   color: number;
   onExceedsLimit: (limit: boolean) => void;
   onError: (error: string) => void;
+  onHoverDimensions: (
+    dimensions: { width: number; height: number; depth: number } | null
+  ) => void;
 }
 
-const Model: React.FC<ModelProps> = ({ url, color, onExceedsLimit, onError }) => {
+const Model: React.FC<ModelProps> = ({
+  url,
+  color,
+  onExceedsLimit,
+  onError,
+  onHoverDimensions,
+}) => {
   const geometry = useLoader(STLLoader, url);
 
   useEffect(() => {
@@ -51,38 +60,52 @@ const Model: React.FC<ModelProps> = ({ url, color, onExceedsLimit, onError }) =>
       }
     }
 
-    // Clean up geometry when component unmounts
     return () => {
       geometry.dispose();
     };
   }, [geometry, onExceedsLimit, onError]);
 
-
   return (
-    <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, Math.PI]} position={[0, 0, 0]}>
+    <mesh
+      geometry={geometry}
+      rotation={[-Math.PI / 2, 0, Math.PI]}
+      position={[0, 0, 0]}
+      // Added hover events
+      onPointerOver={() => {
+        if (geometry.boundingBox && onHoverDimensions) {
+          const size = geometry.boundingBox.getSize(new THREE.Vector3());
+          onHoverDimensions({
+            width: size.x,
+            height: size.z, // height along Z-axis
+            depth: size.y,
+          });
+        }
+      }}
+      onPointerOut={() => {
+        if (onHoverDimensions) onHoverDimensions(null);
+      }}
+    >
       <meshStandardMaterial color={color} />
     </mesh>
   );
 };
 
-const PreviewComponent: React.FC<PreviewComponentProps> = ({ url, onExceedsLimit, onError, imageUrl }) => {
+const PreviewComponent: React.FC<PreviewComponentProps> = ({
+  url,
+  onExceedsLimit,
+  onError,
+  imageUrl,
+}) => {
   const { state } = useColorContext();
   const { color } = state;
 
-  useEffect(() => {
-    const handleResize = () => {
-      // Handle resize logic if needed
-    };
+  // Added: hover dimensions state
+  const [hoveredDimensions, setHoveredDimensions] = useState<{
+    width: number;
+    height: number;
+    depth: number;
+  } | null>(null);
 
-    window.addEventListener("resize", handleResize);
-
-    // Clean up event listener on component unmount
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  // If imageUrl is provided, show the image instead of 3D model
   if (imageUrl) {
     return (
       <div className="flex flex-col items-center">
@@ -98,11 +121,11 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({ url, onExceedsLimit
   }
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center relative">
       <Canvas
         style={{ width: "600px", height: "400px" }}
         camera={{ fov: 50, position: [0, 0, 170] }}
-        dpr={Math.min(window.devicePixelRatio, 1)} // Lower resolution for resource management
+        dpr={Math.min(window.devicePixelRatio, 1)}
       >
         <ambientLight intensity={0.5} />
         <directionalLight position={[1, 2, 1]} intensity={0.5} />
@@ -113,9 +136,19 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({ url, onExceedsLimit
             color={parseInt(color.replace("#", ""), 16)}
             onExceedsLimit={onExceedsLimit}
             onError={onError}
+            onHoverDimensions={setHoveredDimensions} // Added
           />
         )}
       </Canvas>
+
+      {/* Added: show dimensions tooltip on hover */}
+      {hoveredDimensions && (
+        <div className="absolute top-2 right-2 bg-white p-2 rounded shadow z-50 text-sm">
+          <p>Width: {hoveredDimensions.width.toFixed(1)} mm</p>
+          <p>Height: {hoveredDimensions.height.toFixed(1)} mm</p>
+          <p>Depth: {hoveredDimensions.depth.toFixed(1)} mm</p>
+        </div>
+      )}
     </div>
   );
 };
