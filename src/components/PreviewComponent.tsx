@@ -22,7 +22,7 @@ interface ModelProps {
   onError: (error: string) => void;
   onHoverDimensions: (
     dimensions: { width: number; height: number; depth: number } | null
-  ) => void; // ✅ Added
+  ) => void;
 }
 
 const Model: React.FC<ModelProps> = ({
@@ -30,7 +30,7 @@ const Model: React.FC<ModelProps> = ({
   color,
   onExceedsLimit,
   onError,
-  onHoverDimensions, // ✅ Added
+  onHoverDimensions,
 }) => {
   const geometry = useLoader(STLLoader, url);
 
@@ -70,7 +70,7 @@ const Model: React.FC<ModelProps> = ({
       geometry={geometry}
       rotation={[-Math.PI / 2, 0, Math.PI]}
       position={[0, 0, 0]}
-      // ✅ Added hover events
+      // Added hover events
       onPointerOver={() => {
         if (geometry.boundingBox && onHoverDimensions) {
           const size = geometry.boundingBox.getSize(new THREE.Vector3());
@@ -99,20 +99,12 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   const { state } = useColorContext();
   const { color } = state;
 
-  // ✅ Added: hover dimensions state
+  // Added: hover dimensions state
   const [hoveredDimensions, setHoveredDimensions] = useState<{
     width: number;
     height: number;
     depth: number;
   } | null>(null);
-
-  useEffect(() => {
-    const handleResize = () => {};
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   if (imageUrl) {
     return (
@@ -144,12 +136,12 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
             color={parseInt(color.replace("#", ""), 16)}
             onExceedsLimit={onExceedsLimit}
             onError={onError}
-            onHoverDimensions={setHoveredDimensions} // ✅ Added
+            onHoverDimensions={setHoveredDimensions} // Added
           />
         )}
       </Canvas>
 
-      {/* ✅ Added: show dimensions tooltip on hover */}
+      {/* Added: show dimensions tooltip on hover */}
       {hoveredDimensions && (
         <div className="absolute top-2 right-2 bg-white p-2 rounded shadow z-50 text-sm">
           <p>Width: {hoveredDimensions.width.toFixed(1)} mm</p>
