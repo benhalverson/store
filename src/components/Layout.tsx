@@ -1,7 +1,7 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { BASE_URL } from "../config";
-import { SearchBar } from "./SearchBar";
 import { useAuth } from "../context/AuthContext";
+import { SearchBar } from "./SearchBar";
 
 export function Layout() {
   const navigate = useNavigate();
@@ -42,9 +42,9 @@ export function Layout() {
             </Link>
             {user && (
               <button
+                type="button"
                 onClick={handleSignOut}
-                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-              >
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
                 Sign Out
               </button>
             )}

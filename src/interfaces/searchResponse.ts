@@ -1,4 +1,4 @@
-import { ProductResponse } from './productResponse';
+import type { ProductResponse } from "./productResponse";
 
 export interface SearchResponse {
   products: ProductResponse[];

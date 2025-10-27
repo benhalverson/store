@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, ReactNode } from "react";
-import { ColorsResponse } from "../interfaces";
+import type React from "react";
+import { createContext, type ReactNode, useContext, useReducer } from "react";
+import type { ColorsResponse } from "../interfaces";
 
 interface ColorState {
   colorOptions: ColorsResponse[];
@@ -12,7 +13,7 @@ type ColorAction =
   | { type: "SET_COLOR_OPTIONS"; payload: ColorsResponse[] }
   | { type: "SET_COLOR"; payload: string }
   | { type: "SET_IS_LOADING"; payload: boolean }
-  | { type: "SET_INITIAL_COLOR"; payload: string};
+  | { type: "SET_INITIAL_COLOR"; payload: string };
 
 const initialState: ColorState = {
   colorOptions: [],
@@ -35,7 +36,10 @@ const colorReducer = (state: ColorState, action: ColorAction): ColorState => {
       return {
         ...state,
         colorOptions: action.payload,
-        color: !state.hasInitialized && action.payload.length > 0 ? action.payload[0].hexColor : state.color,
+        color:
+          !state.hasInitialized && action.payload.length > 0
+            ? action.payload[0].hexColor
+            : state.color,
         hasInitialized: true,
       };
     case "SET_COLOR":
@@ -48,7 +52,6 @@ const colorReducer = (state: ColorState, action: ColorAction): ColorState => {
       return state;
   }
 };
-
 
 export const ColorProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(colorReducer, initialState);

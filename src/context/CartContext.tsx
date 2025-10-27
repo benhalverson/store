@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { CartContextProps, CartItem } from "../interfaces/cartItem";
 import { BASE_URL } from "../config";
+import type { CartContextProps, CartItem } from "../interfaces/cartItem";
 
 const CartContext = createContext<CartContextProps | undefined>(undefined);
 
@@ -117,7 +117,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           p.id === item.id &&
           p.color === item.color &&
           p.filamentType === item.filamentType &&
-          p.skuNumber === item.skuNumber
+          p.skuNumber === item.skuNumber,
       );
       const updatedCart = existingItem
         ? prev.map((p) =>
@@ -126,7 +126,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             p.filamentType === item.filamentType &&
             p.skuNumber === item.skuNumber
               ? { ...p, quantity: p.quantity + item.quantity }
-              : p
+              : p,
           )
         : [...prev, item];
       syncCart(updatedCart);
@@ -157,13 +157,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       let errorMsg = `Add to cart failed (${res.status})`;
       try {
         const data: unknown = await res.json();
-        if (
-          data &&
-          typeof data === 'object' &&
-          Object.prototype.hasOwnProperty.call(data, 'error')
-        ) {
+        if (data && typeof data === "object" && Object.hasOwn(data, "error")) {
           const errVal = (data as { error: unknown }).error;
-          errorMsg = typeof errVal === 'string' ? errVal : errorMsg;
+          errorMsg = typeof errVal === "string" ? errVal : errorMsg;
         }
       } catch {
         // ignore parse errors
@@ -182,7 +178,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const cartId = await ensureCartId();
       const previous = optimisticAdd(item);
       try {
-        const colorValue = item.color.startsWith('#') ? item.color : `#${item.color}`;
+        const colorValue = item.color.startsWith("#")
+          ? item.color
+          : `#${item.color}`;
         await remoteAdd({
           cartId,
           skuNumber: item.skuNumber,
@@ -207,7 +205,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             item.id === itemToRemove.id &&
             item.color === itemToRemove.color &&
             item.filamentType === itemToRemove.filamentType
-          )
+          ),
       );
 
       syncCart(updatedCart);
@@ -225,7 +223,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const newQty = Math.max(1, quantity);
     let previous: CartItem[] = [];
     setCart((prev) => {
-      previous = prev.map(p => ({ ...p }));
+      previous = prev.map((p) => ({ ...p }));
       const updatedCart = prev.map((item) => {
         if (
           item.id === itemToUpdate.id &&
@@ -242,23 +240,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const cartId = localStorage.getItem('cartId');
-      if (!cartId) throw new Error('Missing cartId for update');
+      const cartId = localStorage.getItem("cartId");
+      if (!cartId) throw new Error("Missing cartId for update");
       const itemId = itemToUpdate.id;
       const res = await fetch(`${BASE_URL}/cart/update`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ cartId, itemId, quantity: newQty })
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ cartId, itemId, quantity: newQty }),
       });
       if (!res.ok) {
         let errMsg = `Failed to update quantity (${res.status})`;
         try {
           const data: unknown = await res.json();
-          if (data && typeof data === 'object' && 'error' in data) {
+          if (data && typeof data === "object" && "error" in data) {
             errMsg = String((data as { error: unknown }).error);
           }
-        } catch {/* ignore */}
+        } catch {
+          /* ignore */
+        }
         throw new Error(errMsg);
       }
     } catch (e) {
@@ -271,14 +271,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity }}
-    >
+      value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) throw new Error("useCart must be inside a CartProvider");

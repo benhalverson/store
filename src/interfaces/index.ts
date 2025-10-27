@@ -1,3 +1,3 @@
-export * from './colors';
-export * from './productResponse';
-export * from './searchResponse';
+export * from "./colors";
+export * from "./productResponse";
+export * from "./searchResponse";

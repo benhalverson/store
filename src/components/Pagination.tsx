@@ -17,7 +17,7 @@ export function Pagination({
   hasNextPage,
   hasPreviousPage,
   onPageChange,
-  onLimitChange
+  onLimitChange,
 }: PaginationProps) {
   const limitOptions = [5, 10, 25];
 
@@ -29,8 +29,7 @@ export function Pagination({
         <select
           value={limit}
           onChange={(e) => onLimitChange(Number(e.target.value))}
-          className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+          className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           {limitOptions.map((option) => (
             <option key={option} value={option}>
               {option}
@@ -38,21 +37,22 @@ export function Pagination({
           ))}
         </select>
         <span className="text-sm text-gray-700">
-          results (showing {((currentPage - 1) * limit) + 1}-{Math.min(currentPage * limit, totalItems)} of {totalItems})
+          results (showing {(currentPage - 1) * limit + 1}-
+          {Math.min(currentPage * limit, totalItems)} of {totalItems})
         </span>
       </div>
 
       {/* Page navigation */}
       <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPreviousPage}
           className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
             hasPreviousPage
-              ? 'bg-blue-500 text-white hover:bg-blue-600'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
+              ? "bg-blue-500 text-white hover:bg-blue-600"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          }`}>
           Previous
         </button>
 
@@ -60,9 +60,9 @@ export function Pagination({
         <div className="flex items-center gap-1">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
             // Show first page, last page, current page, and pages around current
-            const showPage = 
-              page === 1 || 
-              page === totalPages || 
+            const showPage =
+              page === 1 ||
+              page === totalPages ||
               (page >= currentPage - 1 && page <= currentPage + 1);
 
             if (!showPage) {
@@ -79,14 +79,14 @@ export function Pagination({
 
             return (
               <button
+                type="button"
                 key={page}
                 onClick={() => onPageChange(page)}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   page === currentPage
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                }`}
-              >
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                }`}>
                 {page}
               </button>
             );
@@ -94,14 +94,14 @@ export function Pagination({
         </div>
 
         <button
+          type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
           className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
             hasNextPage
-              ? 'bg-blue-500 text-white hover:bg-blue-600'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
+              ? "bg-blue-500 text-white hover:bg-blue-600"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          }`}>
           Next
         </button>
       </div>

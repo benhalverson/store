@@ -1,9 +1,9 @@
 import {
   createContext,
+  type ReactNode,
   useContext,
-  useState,
   useEffect,
-  ReactNode,
+  useState,
 } from "react";
 import { BASE_URL } from "../config";
 
@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: TODO: useEventEffect in 19
   useEffect(() => {
     fetchUser();
   }, []);

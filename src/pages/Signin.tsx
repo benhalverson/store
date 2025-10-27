@@ -5,8 +5,8 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
-import { base64urlToUint8Array, bufferToBase64 } from "../utils/webauthn";
 import { useAuth } from "../context/AuthContext";
+import { base64urlToUint8Array, bufferToBase64 } from "../utils/webauthn";
 
 const Signin = () => {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ const Signin = () => {
     handleSubmit: handleSubmitPasskey,
   } = useForm<{ email: string }>({
     resolver: zodResolver(
-      z.object({ email: z.string().email({ message: "Invalid email" }) })
+      z.object({ email: z.string().email({ message: "Invalid email" }) }),
     ),
   });
 
@@ -99,7 +99,7 @@ const Signin = () => {
       };
 
       options.challenge = base64urlToUint8Array(
-        options.challenge as unknown as string
+        options.challenge as unknown as string,
       ).buffer;
       options.allowCredentials = options.allowCredentials?.map((cred) => ({
         ...cred,
@@ -177,8 +177,7 @@ const Signin = () => {
           } transition`}
           onClick={() => setTab("password")}
           type="button"
-          disabled={loading}
-        >
+          disabled={loading}>
           Password
         </button>
         <button
@@ -189,8 +188,7 @@ const Signin = () => {
           } transition`}
           onClick={() => setTab("passkey")}
           type="button"
-          disabled={loading}
-        >
+          disabled={loading}>
           Passkey
         </button>
       </div>
@@ -199,10 +197,11 @@ const Signin = () => {
       {tab === "password" && (
         <form
           onSubmit={handleSubmit(onSubmitPasswordLogin)}
-          className="space-y-4"
-        >
+          className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Email
             </label>
             <input
@@ -218,7 +217,9 @@ const Signin = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Password
             </label>
             <input
@@ -236,8 +237,7 @@ const Signin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50"
-          >
+            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50">
             Sign In with Password
           </button>
         </form>
@@ -247,10 +247,11 @@ const Signin = () => {
       {tab === "passkey" && (
         <form
           onSubmit={handleSubmitPasskey(handlePasskeyLogin)}
-          className="space-y-4"
-        >
+          className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Email
             </label>
             <input
@@ -267,8 +268,7 @@ const Signin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition disabled:opacity-50"
-          >
+            className="w-full py-2 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition disabled:opacity-50">
             Passkey Login
           </button>
         </form>
