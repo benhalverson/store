@@ -1,4 +1,4 @@
-import { ShoppingBagIcon, UserIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@magicons/react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ColorPicker from "../components/ColorPicker";
@@ -55,13 +55,18 @@ export default function ProductPage() {
                   href="/profile"
                   className="p-2 text-gray-400 hover:text-gray-500 lg:ml-4">
                   <span className="sr-only">Account</span>
-                  <UserIcon aria-hidden="true" className="h-6 w-6" />
+                  <Icon
+                    src="@hero-User"
+                    aria-hidden="true"
+                    className="h-6 w-6"
+                  />
                 </a>
 
                 {/* Cart */}
                 <div className="ml-4 flow-root lg:ml-6">
                   <Link to="/cart" className="group -m-2 flex items-center p-2">
-                    <ShoppingBagIcon
+                    <Icon
+                      src="@hero-ShoppingBag"
                       aria-hidden="true"
                       className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-gray-500"
                     />

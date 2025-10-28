@@ -75,6 +75,12 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20251014.0
         version: 4.20251014.0
+      '@magicons/hero-icons':
+        specifier: ^0.0.3
+        version: 0.0.3
+      '@magicons/react':
+        specifier: ^0.0.1
+        version: 0.0.1(react@18.3.1)
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -117,6 +123,9 @@ importers:
       jsdom:
         specifier: ^27.0.1
         version: 27.0.1(postcss@8.5.6)
+      magicons:
+        specifier: ^0.0.3
+        version: 0.0.3
       playwright:
         specifier: ^1.56.1
         version: 1.56.1
@@ -910,6 +919,17 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@magicons/hero-icons@0.0.3':
+    resolution: {integrity: sha512-2C1JFuNqj1rNzmbJLoeqOKDpqOJAafS8xo6UzuvFZgq4l0AevKj20Zl272WwgFoyC3Gt4VcstvNsbqT+Ae0bxw==}
+
+  '@magicons/react@0.0.1':
+    resolution: {integrity: sha512-+SOISf1uhObfhGI6DZ2pgHWEwPMULFum0QqVu31jw0WcKpy3CZFLn4V8xnCMNq1Jcvdrt2DgykiBPT0+L4+hGw==}
+    peerDependencies:
+      react: ^19.2.0
+
+  '@magicons/shared@0.0.1':
+    resolution: {integrity: sha512-HmX/sNyYCYlE3li354+beoRrNqqh3mG9Hs2JjlrXX2MicgbZAWAIpmS6NM4SSE5dE8oMVSskEqTFX/q2rJ3Bsw==}
 
   '@mediapipe/tasks-vision@0.10.17':
     resolution: {integrity: sha512-CZWV/q6TTe8ta61cZXjfnnHsfWIdFhms03M9T7Cnd5y2mdpylJM0rF1qRq+wsQVRMLz1OYPVEBU9ph2Bx8cxrg==}
@@ -2169,6 +2189,9 @@ packages:
 
   magicast@0.3.5:
     resolution: {integrity: sha512-L0WhttDl+2BOsybvEOLK7fW3UA0OQ0IQ2d6Zl2x/a6vVRs3bAY0ECOSHHeL5jD+SbOpOCUEi0y1DgHEn9Qn1AQ==}
+
+  magicons@0.0.3:
+    resolution: {integrity: sha512-qxRtOoit9SKS0cm0GgvKerMLe6pAVCL0rparwUnkC6r2kAXGbu1azDvH9y/p8ziv5nKQ3qWqzJp09n4h/UEnCg==}
 
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
@@ -3533,6 +3556,15 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@magicons/hero-icons@0.0.3': {}
+
+  '@magicons/react@0.0.1(react@18.3.1)':
+    dependencies:
+      '@magicons/shared': 0.0.1
+      react: 18.3.1
+
+  '@magicons/shared@0.0.1': {}
+
   '@mediapipe/tasks-vision@0.10.17': {}
 
   '@monogrid/gainmap-js@3.1.0(three@0.180.0)':
@@ -4773,6 +4805,10 @@ snapshots:
       '@babel/parser': 7.28.5
       '@babel/types': 7.28.5
       source-map-js: 1.2.1
+
+  magicons@0.0.3:
+    dependencies:
+      '@magicons/shared': 0.0.1
 
   make-dir@4.0.0:
     dependencies:
