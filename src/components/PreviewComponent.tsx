@@ -2,7 +2,7 @@ import { OrbitControls } from "@react-three/drei";
 import { Canvas, useLoader } from "@react-three/fiber";
 import type React from "react";
 import { useEffect, useState } from "react";
-import * as THREE from "three";
+import { Vector3 } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { useColorContext } from "../context/ColorContext";
 
@@ -38,8 +38,8 @@ const Model: React.FC<ModelProps> = ({
   useEffect(() => {
     if (geometry) {
       geometry.computeBoundingBox();
-      const size = geometry.boundingBox?.getSize(new THREE.Vector3());
-      const center = geometry.boundingBox?.getCenter(new THREE.Vector3());
+      const size = geometry.boundingBox?.getSize(new Vector3());
+      const center = geometry.boundingBox?.getCenter(new Vector3());
 
       if (center) {
         geometry.translate(-center.x, -center.y, -center.z); // Center the model
@@ -74,7 +74,7 @@ const Model: React.FC<ModelProps> = ({
       // Added hover events
       onPointerOver={() => {
         if (geometry.boundingBox && onHoverDimensions) {
-          const size = geometry.boundingBox.getSize(new THREE.Vector3());
+          const size = geometry.boundingBox.getSize(new Vector3());
           onHoverDimensions({
             width: size.x,
             height: size.z, // height along Z-axis
