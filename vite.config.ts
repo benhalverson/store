@@ -1,11 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import viteReact from '@vitejs/plugin-react';
-import { defineConfig, } from 'vite';
-// import * as visualizer from "rollup-plugin-visualizer";
+import { defineConfig } from 'vite';
 import { visualizer } from "rollup-plugin-visualizer";
 
 
-const isAnalyze = process.env.ANALYZE === 'true'
+const isAnalyze = process.env.ANALYZE === 'true';
 
 
 export default defineConfig({
@@ -46,6 +45,6 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 800 
+    chunkSizeWarningLimit: 800,
   },
-})  
+})
