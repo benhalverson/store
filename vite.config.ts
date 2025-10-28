@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { visualizer } from "rollup-plugin-visualizer";
+import { magicons } from 'magicons'
 
 
 const isAnalyze = process.env.ANALYZE === 'true';
@@ -9,6 +10,7 @@ const isAnalyze = process.env.ANALYZE === 'true';
 
 export default defineConfig({
   plugins: [viteReact(), tailwindcss(),
+    magicons(),
     (isAnalyze) &&
       visualizer({
         filename: 'stats.html',

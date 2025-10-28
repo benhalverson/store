@@ -1,3 +1,4 @@
+import { Icon } from "@magicons/react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BASE_URL } from "../config";
@@ -111,20 +112,7 @@ export default function SearchResults() {
         {products.length === 0 && query ? (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">
-              <svg
-                className="w-16 h-16 mx-auto"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg">
-                <title>No products found</title>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <Icon src="@hero-MagnifyingGlass" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               No products found

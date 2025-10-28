@@ -21,9 +21,13 @@
     "noFallthroughCasesInSwitch": true,
     "types": [
       "@cloudflare/workers-types/2023-07-01",
-      "vitest"
+      "vitest",
+      "@magicons/hero-icons",
+      "@magicons/lucide-icons",
+      "@magicons/mdi-icons"
     ]
   },
+  
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

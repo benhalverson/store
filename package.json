@@ -44,6 +44,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.1",
     "@cloudflare/workers-types": "^4.20251014.0",
+    "@magicons/hero-icons": "^0.0.3",
+    "@magicons/react": "^0.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.6.1",
@@ -58,6 +60,7 @@
     "@vitest/coverage-v8": "^4.0.4",
     "autoprefixer": "^10.4.21",
     "jsdom": "^27.0.1",
+    "magicons": "^0.0.3",
     "playwright": "^1.56.1",
     "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^4.1.16",
