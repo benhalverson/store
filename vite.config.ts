@@ -22,16 +22,14 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Only bundle Three.js when PreviewComponent is loaded
-          if (id.includes('node_modules/three/')) {
-            return 'three-core';
-          }
-          if (id.includes('@react-three/')) {
-            return 'react-three';
-          }
           // Separate vendor chunks for better caching
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
             return 'react-vendor';
+          }
+          // Keep Three.js separate but don't split @react-three packages
+          // They need to stay with the component that uses them to avoid dependency issues
+          if (id.includes('node_modules/three/') && !id.includes('@react-three')) {
+            return 'three-core';
           }
           if (id.includes('@headlessui') || id.includes('@heroicons') || id.includes('react-hot-toast')) {
             return 'ui-vendor';
