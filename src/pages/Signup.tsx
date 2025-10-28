@@ -8,8 +8,8 @@ import { BASE_URL } from "../config";
 import { base64urlToUint8Array, bufferToBase64 } from "../utils/webauthn";
 
 const schema = z.object({
-  email: z.string().email({ message: "Invalid email" }),
-  password: z.string().min(6, { message: "Password is required" }),
+  email: z.email({ error: "Invalid email" }),
+  password: z.string().min(6, { error: "Password is required" }),
 });
 
 type SignupFormData = z.infer<typeof schema>;
@@ -75,9 +75,11 @@ const Signup = () => {
       const options =
         (await beginRes.json()) as PublicKeyCredentialCreationOptions;
 
+      // @ts-ignore
       options.challenge = base64urlToUint8Array(
         options.challenge as unknown as string,
       );
+      // @ts-ignore
       options.user.id = base64urlToUint8Array(
         options.user.id as unknown as string,
       );

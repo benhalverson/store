@@ -98,9 +98,11 @@ const Signin = () => {
         options: PublicKeyCredentialRequestOptions;
       };
 
+      // @ts-ignore
       options.challenge = base64urlToUint8Array(
         options.challenge as unknown as string,
       ).buffer;
+      // @ts-ignore
       options.allowCredentials = options.allowCredentials?.map((cred) => ({
         ...cred,
         id:

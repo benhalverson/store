@@ -126,9 +126,7 @@ describe("ProductPage", () => {
       },
     );
 
-    render(
-      <RouterProvider router={router} future={{ v7_startTransition: true }} />,
-    );
+    render(<RouterProvider router={router} />);
 
     await waitForElementToBeRemoved(() =>
       screen.queryByText(/Loading product/i),
