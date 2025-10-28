@@ -1,17 +1,17 @@
-import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { Route, Routes } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
+import { ColorProvider } from "./context/ColorContext";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import ProductPage from "./pages/Product";
 import ProductList from "./pages/ProductList";
-import { ColorProvider } from "./context/ColorContext";
-import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
-import Signin from "./pages/Signin";
-import { Layout } from "./components/Layout";
-import Cart from "./pages/Cart";
-import { CartProvider } from "./context/CartContext";
-import Checkout from "./pages/Checkout";
 import SearchResults from "./pages/SearchResults";
-import { AuthProvider } from "./context/AuthContext";
+import Signin from "./pages/Signin";
+import Signup from "./pages/Signup";
 
 function App() {
   return (

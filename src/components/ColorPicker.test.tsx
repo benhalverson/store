@@ -1,9 +1,9 @@
-import { render, screen, waitFor }  from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ColorProvider } from "../context/ColorContext";
-import ColorPicker from "../components/ColorPicker";
-import { ColorsResponse } from "../interfaces";
 import { vi } from "vitest";
+import ColorPicker from "../components/ColorPicker";
+import { ColorProvider } from "../context/ColorContext";
+import type { ColorsResponse } from "../interfaces";
 
 vi.mock("../config", () => ({ BASE_URL: "https://example.test" }));
 
@@ -35,7 +35,7 @@ describe("ColorPicker Component", () => {
     render(
       <ColorProvider>
         <ColorPicker filamentType="PLA" />
-      </ColorProvider>
+      </ColorProvider>,
     );
 
     // Loading text may render immediately or on next tick; wait for it
@@ -46,12 +46,12 @@ describe("ColorPicker Component", () => {
     render(
       <ColorProvider>
         <ColorPicker filamentType="PLA" />
-      </ColorProvider>
+      </ColorProvider>,
     );
 
     // Wait until controls are present (the group label appears)
     await waitFor(() =>
-      expect(screen.getByLabelText(/Choose a color/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/Choose a color/i)).toBeInTheDocument(),
     );
 
     // Be resilient: if options have no accessible names, use position
@@ -70,11 +70,11 @@ describe("ColorPicker Component", () => {
     render(
       <ColorProvider>
         <ColorPicker filamentType="PLA" />
-      </ColorProvider>
+      </ColorProvider>,
     );
 
     await waitFor(() =>
-      expect(screen.getByLabelText(/Choose a color/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/Choose a color/i)).toBeInTheDocument(),
     );
 
     const radios = screen.getAllByRole("radio");

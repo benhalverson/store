@@ -1,10 +1,15 @@
 // Product.test.tsx
-import { render, screen, waitFor, waitForElementToBeRemoved } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ProductPage from "./Product";
-import { vi } from "vitest";
 import { Suspense } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { vi } from "vitest";
+import ProductPage from "./Product";
 
 // Ensure BASE_URL/DOMAIN never point to real endpoints in tests
 vi.mock("../config", () => ({
@@ -17,10 +22,20 @@ vi.mock("../components/PreviewComponent", () => ({
 }));
 
 vi.mock("../components/Gallery", () => ({
-  default: ({ images, onImageClick }: { images: string[]; onImageClick: (i: number) => void }) => (
+  default: ({
+    images,
+    onImageClick,
+  }: {
+    images: string[];
+    onImageClick: (i: number) => void;
+  }) => (
     <div data-testid="gallery">
       {images.map((src, i) => (
-        <button key={src} onClick={() => onImageClick(i)} aria-label={`thumb-${i}`}>
+        <button
+          type="button"
+          key={src}
+          onClick={() => onImageClick(i)}
+          aria-label={`thumb-${i}`}>
           img-{i}
         </button>
       ))}
@@ -45,8 +60,7 @@ vi.mock("../components/FilamentDropdown", () => ({
     <select
       data-testid="filament-dropdown"
       value={selectedFilament}
-      onChange={(e) => setSelectedFilament(e.target.value)}
-    >
+      onChange={(e) => setSelectedFilament(e.target.value)}>
       <option value="PLA">PLA</option>
       <option value="PETG">PETG</option>
     </select>
@@ -65,7 +79,12 @@ vi.mock("../context/CartContext", () => ({
 
 vi.mock("../context/ColorContext", () => ({
   useColorContext: () => ({
-    state: { color: "#ff0000", colorOptions: [], isLoading: false, hasInitialized: true },
+    state: {
+      color: "#ff0000",
+      colorOptions: [],
+      isLoading: false,
+      hasInitialized: true,
+    },
     dispatch: vi.fn(),
   }),
 }));
@@ -104,12 +123,14 @@ describe("ProductPage", () => {
       {
         initialEntries: ["/product/1"],
         future: { v7_relativeSplatPath: true },
-      }
+      },
     );
 
-    render(<RouterProvider router={router} future={{ v7_startTransition: true }} />);
+    render(<RouterProvider router={router} />);
 
-    await waitForElementToBeRemoved(() => screen.queryByText(/Loading product/i));
+    await waitForElementToBeRemoved(() =>
+      screen.queryByText(/Loading product/i),
+    );
     await screen.findByText("RC Wheels");
   });
 
@@ -123,8 +144,8 @@ describe("ProductPage", () => {
     expect(screen.getByText("Description")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "This is a 12mm RC buggy wheel that will fit any modern buggy for 1/10 scale racing."
-      )
+        "This is a 12mm RC buggy wheel that will fit any modern buggy for 1/10 scale racing.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -137,27 +158,27 @@ describe("ProductPage", () => {
     expect(filamentDropdown).toHaveValue("PLA");
   });
 
-it("updates filament selection when dropdown value changes", async () => {
-  const user = userEvent.setup();
+  it("updates filament selection when dropdown value changes", async () => {
+    const user = userEvent.setup();
 
-  // Make sure the product is fully loaded in THIS test's async turn
-  await screen.findByText("RC Wheels");
+    // Make sure the product is fully loaded in THIS test's async turn
+    await screen.findByText("RC Wheels");
 
-  const select = await screen.findByTestId("filament-dropdown");
+    const select = await screen.findByTestId("filament-dropdown");
 
-  // Sanity check initial value
-  expect(select).toHaveValue("PLA");
+    // Sanity check initial value
+    expect(select).toHaveValue("PLA");
 
-  // Change selection using the actual option node
-  await user.selectOptions(
-    select,
-    screen.getByRole("option", { name: "PETG" })
-  );
+    // Change selection using the actual option node
+    await user.selectOptions(
+      select,
+      screen.getByRole("option", { name: "PETG" }),
+    );
 
-  // Re-assert on the SAME select after state settles
-  await screen.findByTestId("filament-dropdown"); // forces re-query in case of remounts
-  await waitFor(() => expect(select).toHaveValue("PETG"));
-});
+    // Re-assert on the SAME select after state settles
+    await screen.findByTestId("filament-dropdown"); // forces re-query in case of remounts
+    await waitFor(() => expect(select).toHaveValue("PETG"));
+  });
 
   it.skip("passes selected filament to ColorPicker", async () => {
     const colorPicker = await screen.findByTestId("color-picker");
@@ -169,14 +190,18 @@ it("updates filament selection when dropdown value changes", async () => {
     const filamentDropdown = await screen.findByTestId("filament-dropdown");
     await user.selectOptions(
       filamentDropdown,
-      screen.getByRole("option", { name: "PETG" })
+      screen.getByRole("option", { name: "PETG" }),
     );
 
-    expect(await screen.findByTestId("color-picker")).toHaveTextContent("Color Picker for PETG");
+    expect(await screen.findByTestId("color-picker")).toHaveTextContent(
+      "Color Picker for PETG",
+    );
   });
 
   it("renders Add to cart button", async () => {
-    const addToCartButton = await screen.findByRole("button", { name: "Add to cart" });
+    const addToCartButton = await screen.findByRole("button", {
+      name: "Add to cart",
+    });
     expect(addToCartButton).toBeInTheDocument();
   });
 });

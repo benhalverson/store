@@ -1,9 +1,8 @@
-import { useEffect } from "react";
 import { Radio, RadioGroup } from "@headlessui/react";
-import { ColorsResponse } from "../interfaces";
+import { useEffect } from "react";
+import { BASE_URL } from "../config";
 import { useColorContext } from "../context/ColorContext";
-import { BASE_URL } from '../config';
-
+import type { ColorsResponse } from "../interfaces";
 
 const ColorPicker: React.FC<Props> = ({ filamentType }) => {
   const { state, dispatch } = useColorContext();
@@ -17,7 +16,7 @@ const ColorPicker: React.FC<Props> = ({ filamentType }) => {
         if (filamentType) url.searchParams.set("filamentType", filamentType);
 
         const response = await fetch(url.toString());
-        const colors = await response.json() as ColorsResponse[];
+        const colors = (await response.json()) as ColorsResponse[];
         dispatch({ type: "SET_COLOR_OPTIONS", payload: colors });
       } catch (error) {
         console.error("Failed to fetch colors:", error);
@@ -35,9 +34,10 @@ const ColorPicker: React.FC<Props> = ({ filamentType }) => {
     <fieldset aria-label="Choose a color" className="mt-2">
       <RadioGroup
         value={color}
-        onChange={(newColor) => dispatch({ type: "SET_COLOR", payload: newColor })}
-        className="flex items-center space-x-3"
-      >
+        onChange={(newColor) =>
+          dispatch({ type: "SET_COLOR", payload: newColor })
+        }
+        className="flex items-center space-x-3">
         {colorOptions?.map((colorOption, index) => (
           <Radio
             key={`${colorOption.hexColor}-${index}`}
@@ -46,13 +46,11 @@ const ColorPicker: React.FC<Props> = ({ filamentType }) => {
               `relative -m-0.5 flex cursor-pointer items-center justify-center rounded-full p-0.5 focus:outline-none ${
                 checked ? "ring-2 ring-offset-1 ring-blue-500" : ""
               }`
-            }
-          >
+            }>
             {({ checked }) => (
               <>
                 <span
                   aria-hidden="true"
-                  aria-labelledby={colorOption.colorTag}
                   className="h-8 w-8 rounded-full border border-black border-opacity-10"
                   style={{ backgroundColor: `#${colorOption.hexColor}` }}
                 />

@@ -1,14 +1,7 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react-swc'
+import tailwindcss from '@tailwindcss/vite';
+import viteReact from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()],
-  test: {
-    globals: true,            // Enable global test functions like describe, it, expect
-    environment: "jsdom",      // Use jsdom for DOM-related tests
-    setupFiles: "./src/setupTests.ts", // Optional: Path to a setup file if needed
-    typecheck: {
-      tsconfig: "./tsconfig.test.json", // Specify the test-specific tsconfig
-    },
-  },
+  plugins: [viteReact(), tailwindcss()],
 })

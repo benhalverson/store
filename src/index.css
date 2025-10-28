@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/** biome-ignore-all lint/suspicious/noUnknownAtRules: Tailwind */
+@import "tailwindcss";
 
 /* Custom utility classes */
 @layer utilities {

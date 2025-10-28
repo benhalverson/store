@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useColorContext } from "../context/ColorContext";
+import { Canvas, useLoader } from "@react-three/fiber";
+import type React from "react";
+import { useEffect, useState } from "react";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { useColorContext } from "../context/ColorContext";
 
 const LIMIT_DIMENSIONS_MM = { length: 250, width: 250, height: 310 }; // in mm
 
@@ -21,7 +22,7 @@ interface ModelProps {
   onExceedsLimit: (limit: boolean) => void;
   onError: (error: string) => void;
   onHoverDimensions: (
-    dimensions: { width: number; height: number; depth: number } | null
+    dimensions: { width: number; height: number; depth: number } | null,
   ) => void;
 }
 
@@ -54,7 +55,7 @@ const Model: React.FC<ModelProps> = ({
 
         if (modelExceedsLimit) {
           onError(
-            `Model dimensions exceed our limit of ${LIMIT_DIMENSIONS_MM.length} (L) x ${LIMIT_DIMENSIONS_MM.width} (W) x ${LIMIT_DIMENSIONS_MM.height} (H) mm.`
+            `Model dimensions exceed our limit of ${LIMIT_DIMENSIONS_MM.length} (L) x ${LIMIT_DIMENSIONS_MM.width} (W) x ${LIMIT_DIMENSIONS_MM.height} (H) mm.`,
           );
         }
       }
@@ -83,8 +84,7 @@ const Model: React.FC<ModelProps> = ({
       }}
       onPointerOut={() => {
         if (onHoverDimensions) onHoverDimensions(null);
-      }}
-    >
+      }}>
       <meshStandardMaterial color={color} />
     </mesh>
   );
@@ -125,8 +125,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
       <Canvas
         style={{ width: "600px", height: "400px" }}
         camera={{ fov: 50, position: [0, 0, 170] }}
-        dpr={Math.min(window.devicePixelRatio, 1)}
-      >
+        dpr={Math.min(window.devicePixelRatio, 1)}>
         <ambientLight intensity={0.5} />
         <directionalLight position={[1, 2, 1]} intensity={0.5} />
         <OrbitControls />

@@ -1,12 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import FilamentDropdown from "../components/FilamentDropdown";
 
 describe("FilamentDropdown Component", () => {
   it("renders with the correct initial value", () => {
     render(
-      <FilamentDropdown selectedFilament="PLA" setSelectedFilament={() => {}} />
+      <FilamentDropdown
+        selectedFilament="PLA"
+        setSelectedFilament={() => {}}
+      />,
     );
 
     const dropdown = screen.getByRole("combobox");
@@ -21,7 +24,7 @@ describe("FilamentDropdown Component", () => {
       <FilamentDropdown
         selectedFilament="PLA"
         setSelectedFilament={mockSetSelectedFilament}
-      />
+      />,
     );
 
     const dropdown = screen.getByRole("combobox");
@@ -35,7 +38,10 @@ describe("FilamentDropdown Component", () => {
 
   it("renders all dropdown options", () => {
     render(
-      <FilamentDropdown selectedFilament="PLA" setSelectedFilament={() => {}} />
+      <FilamentDropdown
+        selectedFilament="PLA"
+        setSelectedFilament={() => {}}
+      />,
     );
 
     const options = screen.getAllByRole("option");

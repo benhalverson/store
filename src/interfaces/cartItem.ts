@@ -1,4 +1,4 @@
-export interface CartItemsProps  {
+export interface CartItemsProps {
   id: string;
   name: string;
   price: number;
@@ -7,7 +7,6 @@ export interface CartItemsProps  {
   onRemove: (id: string) => void;
 }
 
-
 export interface CartContextProps {
   cart: CartItem[];
   addToCart: (item: CartItem) => Promise<void>;
@@ -15,7 +14,6 @@ export interface CartContextProps {
   clearCart: () => void;
   updateQuantity: (item: CartItem, quantity: number) => Promise<void>;
 }
-
 
 export type CartItem = {
   id: number;
