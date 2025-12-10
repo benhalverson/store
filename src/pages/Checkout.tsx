@@ -239,7 +239,6 @@ export default function Checkout() {
       if (data.orderId) {
         navigate(`/order/${data.orderId}`);
       }
-      console.log('data', data);
     } catch (err: unknown) {
       setCartError(err instanceof Error ? err.message : "Payment intent failed");
     } finally {
