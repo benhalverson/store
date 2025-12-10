@@ -176,6 +176,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const cartId = await ensureCartId();
+
       const previous = optimisticAdd(item);
       try {
         const colorValue = item.color.startsWith("#")
