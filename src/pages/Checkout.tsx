@@ -43,6 +43,37 @@ interface ShippingCostResponse {
   shippingCost: number;
 }
 
+interface PaymentIntentResponse {
+  checkout_url?: string;
+  // API returns `clientSecret` (camelCase); accept `client_secret` as well for compatibility
+  clientSecret?: string;
+  client_secret?: string;
+  amount?: number;
+  currency?: string;
+  orderId?: string | number;
+}
+
+function isObject(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null;
+}
+
+function parsePaymentIntentResponse(obj: unknown): PaymentIntentResponse | null {
+  if (!isObject(obj)) return null;
+  const record = obj as Record<string, unknown>;
+  const checkout_url = typeof record.checkout_url === "string" ? record.checkout_url : undefined;
+  const clientSecret = typeof record.clientSecret === "string" ? record.clientSecret : undefined;
+  const client_secret = typeof record.client_secret === "string" ? record.client_secret : undefined;
+  const amount = typeof record.amount === "number" ? record.amount : undefined;
+  const currency = typeof record.currency === "string" ? record.currency : undefined;
+  const orderId =
+    typeof record.orderId === "string" || typeof record.orderId === "number"
+      ? (record.orderId as string | number)
+      : undefined;
+  if (checkout_url || clientSecret || client_secret || amount || currency || orderId)
+    return { checkout_url, clientSecret, client_secret, amount, currency, orderId };
+  return null;
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
@@ -169,7 +200,53 @@ export default function Checkout() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("handleSubmit called", profile);
+    const cartId = localStorage.getItem("cartId");
+    if (!cartId) {
+      setCartError("No cartId found");
+      return;
+    }
+    setCartLoading(true);
+    setCartError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/cart/${cartId}/payment-intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ shippingInfo, profile }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Payment intent request failed (${res.status}): ${text}`);
+      }
+      const dataJson: unknown = await res.json();
+      const data = parsePaymentIntentResponse(dataJson);
+      console.log('data', data);
+      if (!data) {
+        console.warn("Unexpected payment intent response:", dataJson);
+        throw new Error("Invalid payment intent response");
+      }
+      // If backend provides a checkout URL, redirect there
+      if (data.checkout_url) {
+        navigate(data.checkout_url as string);
+        return;
+      }
+      // If backend returned a Stripe client secret, navigate to a route that can handle it
+      const clientSecret = data.clientSecret ?? data.client_secret;
+      if (clientSecret) {
+        // Navigate to the payment page which loads Stripe Elements and completes confirmation
+        navigate(`/payment?client_secret=${encodeURIComponent(clientSecret)}`);
+        return;
+      }
+      // Fallback: log the response and optionally navigate if order id provided
+      console.log("Payment intent response:", data);
+      if (data.orderId) {
+        navigate(`/order/${data.orderId}`);
+      }
+    } catch (err: unknown) {
+      setCartError(err instanceof Error ? err.message : "Payment intent failed");
+    } finally {
+      setCartLoading(false);
+    }
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: TODO: useEventEffect in 19

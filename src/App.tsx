@@ -9,6 +9,8 @@ import { ColorProvider } from "./context/ColorContext";
 // Lazy load pages for code-splitting
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
+const Payment = lazy(() => import("./pages/Payment"));
+const OrderComplete = lazy(() => import("./pages/OrderComplete"));
 const ProductPage = lazy(() => import("./pages/Product"));
 const ProductList = lazy(() => import("./pages/ProductList"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -38,6 +40,8 @@ function App() {
                 <Route path="profile" element={<Profile />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/payment" element={<Payment />} />
+                <Route path="/order/complete" element={<OrderComplete />} />
 
                 {/* Route to ProductPage with a dynamic product ID */}
                 <Route path="product/:id" element={<ProductPage />} />
