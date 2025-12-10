@@ -230,17 +230,16 @@ export default function Checkout() {
         navigate(data.checkout_url);
         return;
       }
-      // If backend returned a Stripe client secret, navigate to a route that can handle it
       const clientSecret = data.clientSecret ?? data.client_secret;
       if (clientSecret) {
-        // Navigate to the payment page which loads Stripe Elements and completes confirmation
-        navigate(`/payment?client_secret=${encodeURIComponent(clientSecret)}`);
+        navigate(`/payment`, { state: { clientSecret } });
         return;
       }
       // Fallback: optionally navigate if order id provided
       if (data.orderId) {
         navigate(`/order/${data.orderId}`);
       }
+      console.log('data', data);
     } catch (err: unknown) {
       setCartError(err instanceof Error ? err.message : "Payment intent failed");
     } finally {

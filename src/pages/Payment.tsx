@@ -66,7 +66,9 @@ function PaymentForm() {
 export default function PaymentPage() {
   const loc = useLocation();
   const q = useMemo(() => new URLSearchParams(loc.search), [loc.search]);
-  const clientSecret = q.get("client_secret");
+  // Prefer router state (in-memory) to avoid exposing secrets in the URL.
+  const state = (loc.state as { clientSecret?: string } | null) ?? null;
+  const clientSecret = state?.clientSecret ?? q.get("client_secret");
 
   if (!publishableKey) {
     return (
