@@ -220,14 +220,14 @@ export default function Checkout() {
       }
       const dataJson: unknown = await res.json();
       const data = parsePaymentIntentResponse(dataJson);
-      console.log('data', data);
+
       if (!data) {
         console.warn("Unexpected payment intent response:", dataJson);
         throw new Error("Invalid payment intent response");
       }
       // If backend provides a checkout URL, redirect there
       if (data.checkout_url) {
-        navigate(data.checkout_url as string);
+        navigate(data.checkout_url);
         return;
       }
       // If backend returned a Stripe client secret, navigate to a route that can handle it
@@ -237,8 +237,7 @@ export default function Checkout() {
         navigate(`/payment?client_secret=${encodeURIComponent(clientSecret)}`);
         return;
       }
-      // Fallback: log the response and optionally navigate if order id provided
-      console.log("Payment intent response:", data);
+      // Fallback: optionally navigate if order id provided
       if (data.orderId) {
         navigate(`/order/${data.orderId}`);
       }
