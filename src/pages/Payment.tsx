@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, type PaymentIntentResult } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
@@ -24,7 +24,7 @@ function PaymentForm() {
     setLoading(true);
     setError(null);
     try {
-      const result: any = await stripe.confirmPayment({
+      const result: PaymentIntentResult = await stripe.confirmPayment({
         elements,
         confirmParams: {
           // You can change return_url to an order confirmation route
