@@ -3,12 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import ColorPicker from "../components/ColorPicker";
 import { ColorProvider } from "../context/ColorContext";
-import type { ColorsResponse } from "../interfaces";
 
 vi.mock("../config", () => ({ BASE_URL: "https://example.test" }));
 
-// Mock data for color options
-const mockColors: ColorsResponse[] = [
+// v1 /colors mock response shape
+type V1ColorResponse = {
+  filament: string;
+  hexColor: string;
+  colorTag: string;
+};
+
+const mockColors: V1ColorResponse[] = [
   { filament: "PLA", hexColor: "FF5733", colorTag: "Red" },
   { filament: "PLA", hexColor: "33FF57", colorTag: "Green" },
   { filament: "PLA", hexColor: "3357FF", colorTag: "Blue" },

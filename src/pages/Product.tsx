@@ -1,7 +1,7 @@
 import { ShoppingBagIcon, UserIcon } from "@heroicons/react/24/outline";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import ColorPicker from "../components/ColorPicker";
+import ColorPickerWrapper from "../components/ColorPickerWrapper";
 import FilamentDropdown from "../components/FilamentDropdown";
 import Gallery from "../components/Gallery";
 import { BASE_URL } from "../config";
@@ -146,7 +146,7 @@ export default function ProductPage() {
               </div>
               <div>
                 <h2 className="text-sm font-medium text-gray-900">Color</h2>
-                <ColorPicker filamentType={selectedFilament} />
+                <ColorPickerWrapper filamentType={selectedFilament} />
                 <div className="mt-4">
                   <h2 className="text-sm font-medium text-gray-900">
                     Quantity

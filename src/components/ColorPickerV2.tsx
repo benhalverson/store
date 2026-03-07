@@ -4,7 +4,13 @@ import { BASE_URL } from "../config";
 import { useColorContext } from "../context/ColorContext";
 import type { ColorsResponse } from "../interfaces";
 
-const ColorPicker: React.FC<Props> = ({ filamentType }) => {
+interface Props {
+  filamentType: string;
+}
+
+// v2 ColorPicker: consumes the new /v2/colors API which already
+// returns data in the ColorsResponse shape.
+const ColorPickerV2: React.FC<Props> = ({ filamentType }) => {
   const { state, dispatch } = useColorContext();
   const { colorOptions, isLoading, color } = state;
 
@@ -12,35 +18,24 @@ const ColorPicker: React.FC<Props> = ({ filamentType }) => {
     const fetchColors = async () => {
       dispatch({ type: "SET_IS_LOADING", payload: true });
       try {
-        const url = new URL(`${BASE_URL}/colors`);
-        if (filamentType) url.searchParams.set("filamentType", filamentType);
+        const url = new URL(`${BASE_URL}/v2/colors`);
+        if (filamentType) url.searchParams.set("profile", filamentType);
 
         const response = await fetch(url.toString());
 
-        // v1 /colors response shape
-        type V1ColorResponse = {
-          filament: string;
-          hexColor: string;
-          colorTag: string;
+        type V2ColorsEnvelope = {
+          success: boolean;
+          message: string;
+          data: ColorsResponse[];
         };
 
-        const rawColors = (await response.json()) as V1ColorResponse[];
+        const json = (await response.json()) as V2ColorsEnvelope;
+        const colors = json.data ?? [];
 
-        const mappedColors: ColorsResponse[] = rawColors.map((c) => ({
-          name: c.filament,
-          provider: "", // not provided by v1 API
-          public: true,
-          available: true,
-          profile: c.colorTag,
-          color: c.filament,
-          hexValue: `#${c.hexColor.replace(/^#/, "")}`,
-          publicId: c.colorTag,
-        }));
-
-        console.log("Fetched colors (v1 mapped):", mappedColors);
-        dispatch({ type: "SET_COLOR_OPTIONS", payload: mappedColors });
+        console.log("Fetched colors (v2):", colors);
+        dispatch({ type: "SET_COLOR_OPTIONS", payload: colors });
       } catch (error) {
-        console.error("Failed to fetch colors:", error);
+        console.error("Failed to fetch v2 colors:", error);
       } finally {
         dispatch({ type: "SET_IS_LOADING", payload: false });
       }
@@ -91,8 +86,4 @@ const ColorPicker: React.FC<Props> = ({ filamentType }) => {
   );
 };
 
-export default ColorPicker;
-
-interface Props {
-  filamentType: string;
-}
+export default ColorPickerV2;
