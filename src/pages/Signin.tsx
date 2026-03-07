@@ -12,7 +12,7 @@ const Signin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"password" | "passkey">("password");
-  const { setUser } = useAuth();
+  const { fetchUser } = useAuth();
 
   const schema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -55,11 +55,7 @@ const Signin = () => {
       });
 
       if (!res.ok) throw new Error("Invalid credentials");
-      const profileRes = await fetch(`${BASE_URL}/profile`, {
-        credentials: "include",
-      });
-      const profileData: any = await profileRes.json();
-      setUser(profileData);
+      await fetchUser();
       toast.success("Signed in!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {
@@ -149,6 +145,7 @@ const Signin = () => {
         throw new Error(result.error || "Passkey verification failed");
       }
 
+      await fetchUser();
       toast.success("Passkey login successful!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {

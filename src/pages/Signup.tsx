@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
+import { useAuth } from "../context/AuthContext";
 import { base64urlToUint8Array, bufferToBase64 } from "../utils/webauthn";
 
 const schema = z.object({
@@ -17,6 +18,7 @@ type SignupFormData = z.infer<typeof schema>;
 const Signup = () => {
   const resolver = zodResolver(schema);
   const navigate = useNavigate();
+  const { fetchUser } = useAuth();
 
   const {
     register,
@@ -39,6 +41,7 @@ const Signup = () => {
       });
       if (!res.ok) throw new Error("Signup failed");
 
+      await fetchUser();
       toast.success("Signup successful!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {
@@ -109,6 +112,7 @@ const Signup = () => {
       });
       if (!finishRes.ok) throw new Error("Failed to finish WebAuthn");
 
+      await fetchUser();
       toast.success("Passkey signup complete!", { id: toastId });
       navigate("/profile");
       reset();
