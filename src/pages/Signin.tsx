@@ -204,6 +204,7 @@ const Signin = () => {
               Email
             </label>
             <input
+              id="email"
               type="email"
               {...register("email")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-300 dark:bg-gray-800 dark:text-white"
@@ -222,6 +223,7 @@ const Signin = () => {
               Password
             </label>
             <input
+              id="password"
               type="password"
               {...register("password")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-300 dark:bg-gray-800 dark:text-white"

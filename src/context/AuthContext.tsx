@@ -28,11 +28,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/profile`, {
+      const sessionRes = await fetch(`${BASE_URL}/api/auth/get-session`, {
         credentials: "include",
       });
-      if (res.ok) {
-        const data: any = await res.json();
+      if (!sessionRes.ok) {
+        setUser(null);
+        return;
+      }
+      const profileRes = await fetch(`${BASE_URL}/profile`, {
+        credentials: "include",
+      });
+      if (profileRes.ok) {
+        const data: any = await profileRes.json();
         setUser(data);
       } else {
         setUser(null);
