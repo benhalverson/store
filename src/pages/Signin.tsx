@@ -6,13 +6,13 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
 import { useAuth } from "../context/AuthContext";
-import { base64urlToUint8Array, bufferToBase64 } from "../utils/webauthn";
+import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
 
 const Signin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"password" | "passkey">("password");
-  const { setUser } = useAuth();
+  const { fetchUser } = useAuth();
 
   const schema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -31,18 +31,6 @@ const Signin = () => {
     resolver: zodResolver(schema),
   });
 
-  // For passkey, we only need email
-  const {
-    register: registerPasskey,
-    getValues: getValuesPasskey,
-    formState: { errors: errorsPasskey },
-    handleSubmit: handleSubmitPasskey,
-  } = useForm<{ email: string }>({
-    resolver: zodResolver(
-      z.object({ email: z.string().email({ message: "Invalid email" }) }),
-    ),
-  });
-
   const onSubmitPasswordLogin = async (data: FormData) => {
     setLoading(true);
     const toastId = toast.loading("Signing in...");
@@ -54,12 +42,15 @@ const Signin = () => {
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) throw new Error("Invalid credentials");
-      const profileRes = await fetch(`${BASE_URL}/profile`, {
-        credentials: "include",
-      });
-      const profileData: any = await profileRes.json();
-      setUser(profileData);
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+        throw new Error(body.message || body.code || "Invalid credentials");
+      }
+
+      await fetchUser();
       toast.success("Signed in!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {
@@ -73,36 +64,37 @@ const Signin = () => {
     }
   };
 
-  const handlePasskeyLogin = async (data?: { email: string }) => {
-    const email = data?.email || getValuesPasskey("email");
-    if (!email) {
-      toast.error("Enter your email to continue with passkey");
-      return;
-    }
-
+  const handlePasskeyLogin = async () => {
     setLoading(true);
     const toastId = toast.loading("Authenticating with passkey...");
 
     try {
-      const beginRes = await fetch(`${BASE_URL}/webauthn/auth/begin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
+      const optionsRes = await fetch(
+        `${BASE_URL}/api/auth/passkey/generate-authenticate-options`,
+        { credentials: "include" },
+      );
 
-      if (!beginRes.ok)
-        throw new Error("User not registered or no passkey found");
+      if (!optionsRes.ok) {
+        const body = (await optionsRes.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+        throw new Error(
+          body.message || body.code || "Failed to get passkey options",
+        );
+      }
 
-      const { options } = (await beginRes.json()) as {
-        options: PublicKeyCredentialRequestOptions;
-      };
+      const options =
+        (await optionsRes.json()) as PublicKeyCredentialRequestOptions & {
+          challenge: string;
+          allowCredentials?: Array<{ id: string; type: string }>;
+        };
 
-      // @ts-ignore
+      // @ts-expect-error
       options.challenge = base64urlToUint8Array(
         options.challenge as unknown as string,
       ).buffer;
-      // @ts-ignore
+      // @ts-expect-error
       options.allowCredentials = options.allowCredentials?.map((cred) => ({
         ...cred,
         id:
@@ -120,40 +112,45 @@ const Signin = () => {
       const authResp = credential.response as AuthenticatorAssertionResponse;
 
       const payload = {
-        email,
+        id: credential.id,
+        rawId: bufferToBase64url(credential.rawId),
+        type: credential.type,
         response: {
-          id: base64urlToUint8Array(credential.id),
-          rawId: bufferToBase64(credential.rawId),
-          type: credential.type,
-          response: {
-            authenticatorData: bufferToBase64(authResp.authenticatorData),
-            clientDataJSON: bufferToBase64(authResp.clientDataJSON),
-            signature: bufferToBase64(authResp.signature),
-            userHandle: authResp.userHandle
-              ? bufferToBase64(authResp.userHandle)
-              : null,
-          },
+          authenticatorData: bufferToBase64url(authResp.authenticatorData),
+          clientDataJSON: bufferToBase64url(authResp.clientDataJSON),
+          signature: bufferToBase64url(authResp.signature),
+          userHandle: authResp.userHandle
+            ? bufferToBase64url(authResp.userHandle)
+            : null,
         },
+        clientExtensionResults: credential.getClientExtensionResults(),
       };
 
-      const finishRes = await fetch(`${BASE_URL}/webauthn/auth/finish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
+      const verifyRes = await fetch(
+        `${BASE_URL}/api/auth/passkey/verify-authentication`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        },
+      );
 
-      if (!finishRes.ok) {
-        const result = (await finishRes.json()) as { error?: string };
-        console.log("error", result);
-        throw new Error(result.error || "Passkey verification failed");
+      if (!verifyRes.ok) {
+        const body = (await verifyRes.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+        throw new Error(
+          body.message || body.code || "Passkey verification failed",
+        );
       }
 
+      await fetchUser();
       toast.success("Passkey login successful!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {
       if (err instanceof Error) {
-        console.log("catch error", err);
         toast.error(`Login failed: ${err.message}`, { id: toastId });
       } else {
         toast.error("Login failed", { id: toastId });
@@ -247,33 +244,18 @@ const Signin = () => {
 
       {/* Passkey Login Tab */}
       {tab === "passkey" && (
-        <form
-          onSubmit={handleSubmitPasskey(handlePasskeyLogin)}
-          className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              {...registerPasskey("email")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-300 dark:bg-gray-800 dark:text-white"
-            />
-            {errorsPasskey.email && (
-              <p className="text-sm text-red-600 mt-1">
-                {errorsPasskey.email.message}
-              </p>
-            )}
-          </div>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Sign in using a passkey registered on this device or a security key.
+          </p>
           <button
-            type="submit"
+            type="button"
+            onClick={handlePasskeyLogin}
             disabled={loading}
             className="w-full py-2 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-md transition disabled:opacity-50">
             Passkey Login
           </button>
-        </form>
+        </div>
       )}
     </div>
   );

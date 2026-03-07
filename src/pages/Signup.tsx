@@ -75,11 +75,11 @@ const Signup = () => {
       const options =
         (await beginRes.json()) as PublicKeyCredentialCreationOptions;
 
-      // @ts-ignore
+      // @ts-expect-error
       options.challenge = base64urlToUint8Array(
         options.challenge as unknown as string,
       );
-      // @ts-ignore
+      // @ts-expect-error
       options.user.id = base64urlToUint8Array(
         options.user.id as unknown as string,
       );
