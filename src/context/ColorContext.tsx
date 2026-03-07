@@ -38,7 +38,7 @@ const colorReducer = (state: ColorState, action: ColorAction): ColorState => {
         colorOptions: action.payload,
         color:
           !state.hasInitialized && action.payload.length > 0
-            ? action.payload[0].hexColor
+            ? action.payload[0].hexValue
             : state.color,
         hasInitialized: true,
       };
