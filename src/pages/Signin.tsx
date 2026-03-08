@@ -131,13 +131,18 @@ const Signin = () => {
         clientExtensionResults: credential.getClientExtensionResults(),
       };
 
+      const verifyPayload = {
+        response: payload,
+        credentialId: payload.id,
+      };
+
       const verifyRes = await fetch(
         `${BASE_URL}/api/auth/passkey/verify-authentication`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(payload),
+          body: JSON.stringify(verifyPayload),
         },
       );
 

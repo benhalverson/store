@@ -189,15 +189,21 @@ describe("Signin – passkey tab", () => {
     const verifyCall = fetchSpy.mock.calls[1];
     expect(verifyCall[0]).toContain("/api/auth/passkey/verify-authentication");
     const body = JSON.parse(verifyCall[1]?.body as string);
+
     expect(body).toMatchObject({
-      id: "cred-id-base64url",
-      type: "public-key",
       response: {
-        authenticatorData: expect.any(String),
-        clientDataJSON: expect.any(String),
-        signature: expect.any(String),
+        id: "cred-id-base64url",
+        rawId: "AQID",
+        type: "public-key",
+        response: {
+          authenticatorData: expect.any(String),
+          clientDataJSON: expect.any(String),
+          signature: expect.any(String),
+          userHandle: null,
+        },
+        clientExtensionResults: {},
       },
-      clientExtensionResults: {},
+      credentialId: "cred-id-base64url",
     });
 
     expect(mockNavigate).toHaveBeenCalledWith("/profile");

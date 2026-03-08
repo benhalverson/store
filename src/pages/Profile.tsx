@@ -5,7 +5,9 @@ import { BASE_URL } from "../config";
 import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
 
 interface PasskeyAuthenticator {
-  credentialId: string;
+  credentialID?: string;
+  credentialId?: string;
+  id?: string;
 }
 
 interface ProfileFormData extends Profile {
@@ -179,12 +181,12 @@ const Profile = () => {
     }
   };
 
-  const handleRemove = async (id: string) => {
+  const handleRemove = async (passkeyId: string) => {
     const res = await fetch(`${BASE_URL}/api/auth/passkey/delete-passkey`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id: passkeyId }),
     });
 
     if (!res.ok) {
@@ -427,21 +429,27 @@ const Profile = () => {
           </p>
         )}
         <ul className="space-y-2">
-          {authenticators.map((auth) => (
+          {authenticators.map((auth, index) => {
+            const passkeyId = auth.id;
+            const credentialId = auth.credentialID || auth.credentialId || auth.id;
+
+            return (
             <li
-              key={auth.credentialId}
+              key={passkeyId || credentialId || `passkey-${index}`}
               className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-              <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
-                {auth.credentialId.slice(0, 18)}...
+              <span className="font-mono text-xs text-white dark:text-gray-300">
+                {credentialId || "Unknown passkey"}
               </span>
               <button
                 type="button"
-                onClick={() => handleRemove(auth.credentialId)}
+                onClick={() => passkeyId && handleRemove(passkeyId)}
+                disabled={!passkeyId}
                 className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
                 Remove
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
     </div>
