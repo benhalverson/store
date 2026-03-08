@@ -6,7 +6,11 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
 import { useAuth } from "../context/AuthContext";
-import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
+import {
+  base64urlToUint8Array,
+  bufferToBase64url,
+  validateWebAuthnOptionsRpId,
+} from "../utils/webauthn";
 
 const schema = z.object({
   email: z.email({ error: "Invalid email" }),
@@ -108,8 +112,15 @@ const Signup = () => {
       const rawOptions = (await optionsRes.json()) as {
         challenge: string;
         user: { id: string; name: string; displayName: string };
+        rp?: { id?: string; name?: string };
         [key: string]: unknown;
       };
+
+      const rpIdValidation = validateWebAuthnOptionsRpId(rawOptions);
+      if (!rpIdValidation.isValid) {
+        console.error("Invalid WebAuthn register RP ID", rpIdValidation);
+        throw new Error(rpIdValidation.message);
+      }
 
       const options = {
         ...rawOptions,
