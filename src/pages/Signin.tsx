@@ -6,7 +6,11 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
 import { useAuth } from "../context/AuthContext";
-import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
+import {
+  base64urlToUint8Array,
+  bufferToBase64url,
+  validateWebAuthnOptionsRpId,
+} from "../utils/webauthn";
 
 const Signin = () => {
   const navigate = useNavigate();
@@ -98,6 +102,12 @@ const Signin = () => {
           transports?: AuthenticatorTransport[];
         }>;
       };
+
+      const rpIdValidation = validateWebAuthnOptionsRpId(rawOptions);
+      if (!rpIdValidation.isValid) {
+        console.error("Invalid WebAuthn authenticate RP ID", rpIdValidation);
+        throw new Error(rpIdValidation.message);
+      }
 
       const publicKey: PublicKeyCredentialRequestOptions = {
         ...rawOptions,

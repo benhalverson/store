@@ -2,7 +2,11 @@ import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import InputField from "../components/InputField";
 import { BASE_URL } from "../config";
-import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
+import {
+  base64urlToUint8Array,
+  bufferToBase64url,
+  validateWebAuthnOptionsRpId,
+} from "../utils/webauthn";
 
 interface PasskeyAuthenticator {
   credentialID?: string;
@@ -108,6 +112,13 @@ const Profile = () => {
           challenge: string;
           user: { id: string; [key: string]: unknown };
         };
+
+      const rpIdValidation = validateWebAuthnOptionsRpId(options);
+      if (!rpIdValidation.isValid) {
+        console.error("Invalid WebAuthn register RP ID", rpIdValidation);
+        setMessage(rpIdValidation.message || "Invalid passkey configuration");
+        return;
+      }
 
       const publicKey: PublicKeyCredentialCreationOptions = {
         ...options,

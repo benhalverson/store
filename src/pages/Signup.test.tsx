@@ -37,6 +37,14 @@ function renderSignup() {
 }
 
 describe("Signup", () => {
+  beforeEach(() => {
+    Object.defineProperty(globalThis.navigator, "credentials", {
+      value: { create: vi.fn() },
+      configurable: true,
+      writable: true,
+    });
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     mockFetchUser.mockReset();
@@ -125,5 +133,49 @@ describe("Signup", () => {
         expect.anything(),
       ),
     );
+  });
+
+  it("fails fast when register options include a URL-shaped RP ID", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          challenge: "dGVzdC1jaGFsbGVuZ2U",
+          user: {
+            id: "dXNlci0xMjM",
+            name: "user@example.com",
+            displayName: "User Example",
+          },
+          rp: { id: "https://rc-store.benhalverson.dev" },
+        }),
+      } as Response);
+    mockFetchUser.mockResolvedValueOnce({ email: "user@example.com" });
+
+    const toast = await import("react-hot-toast");
+
+    renderSignup();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/password/i), "password123");
+    await user.click(screen.getByRole("button", { name: /^sign up$/i }));
+    await screen.findByRole("button", { name: /add passkey to my account/i });
+
+    await user.click(
+      screen.getByRole("button", { name: /add passkey to my account/i }),
+    );
+
+    await waitFor(() =>
+      expect(toast.default.error).toHaveBeenCalledWith(
+        expect.stringContaining("Passkeys are unavailable on this deployment"),
+        expect.anything(),
+      ),
+    );
+
+    expect(navigator.credentials.create).not.toHaveBeenCalled();
   });
 });

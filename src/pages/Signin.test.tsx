@@ -144,9 +144,34 @@ describe("Signin – passkey tab", () => {
     );
   });
 
+  it("fails fast when the backend returns a URL-shaped RP ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        challenge: "dGVzdC1jaGFsbGVuZ2U",
+        rpId: "https://rc-store.benhalverson.dev",
+      }),
+    } as Response);
+
+    const toast = await import("react-hot-toast");
+    const user = await switchToPasskeyTab();
+
+    await user.click(screen.getByRole("button", { name: /passkey login/i }));
+
+    await waitFor(() =>
+      expect(toast.default.error).toHaveBeenCalledWith(
+        expect.stringContaining("Passkeys are unavailable on this deployment"),
+        expect.anything(),
+      ),
+    );
+
+    expect(navigator.credentials.get).not.toHaveBeenCalled();
+  });
+
   it("sends correct payload to verify-authentication and navigates on success", async () => {
     const fakeOptions = {
       challenge: "dGVzdC1jaGFsbGVuZ2U",
+      rpId: "localhost",
       allowCredentials: [{ id: "Y3JlZC1pZA", type: "public-key" }],
       timeout: 60000,
     };
