@@ -125,9 +125,13 @@ const Profile = () => {
       };
 
       const verifyPayload = {
-        ...credentialResponse,
-        credentialId: credentialResponse.id,
+        response: credentialResponse,
         credential: credentialResponse,
+        credentialId: credentialResponse.id,
+        id: credentialResponse.id,
+        rawId: credentialResponse.rawId,
+        type: credentialResponse.type,
+        clientExtensionResults: credentialResponse.clientExtensionResults,
       };
 
       const finishRes = await fetch(

@@ -111,9 +111,13 @@ const Signup = () => {
       };
 
       const verifyPayload = {
-        ...serialized,
-        credentialId: serialized.id,
+        response: serialized,
         credential: serialized,
+        credentialId: serialized.id,
+        id: serialized.id,
+        rawId: serialized.rawId,
+        type: serialized.type,
+        clientExtensionResults: serialized.clientExtensionResults,
       };
 
       const verifyRes = await fetch(
