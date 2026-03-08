@@ -124,13 +124,19 @@ const Profile = () => {
         clientExtensionResults: credential.getClientExtensionResults(),
       };
 
+      const verifyPayload = {
+        ...credentialResponse,
+        credentialId: credentialResponse.id,
+        credential: credentialResponse,
+      };
+
       const finishRes = await fetch(
         `${BASE_URL}/api/auth/passkey/verify-registration`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(credentialResponse),
+          body: JSON.stringify(verifyPayload),
         },
       );
 

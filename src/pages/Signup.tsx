@@ -110,13 +110,19 @@ const Signup = () => {
         clientExtensionResults: credential.getClientExtensionResults(),
       };
 
+      const verifyPayload = {
+        ...serialized,
+        credentialId: serialized.id,
+        credential: serialized,
+      };
+
       const verifyRes = await fetch(
         `${BASE_URL}/api/auth/passkey/verify-registration`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(serialized),
+          body: JSON.stringify(verifyPayload),
         },
       );
       if (!verifyRes.ok) throw new Error("Passkey registration failed");
