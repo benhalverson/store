@@ -31,7 +31,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const sessionRes = await fetch(`${BASE_URL}/api/auth/get-session`, {
         credentials: "include",
       });
-      if (!sessionRes.ok) {
+      const sessionData = sessionRes.ok ? await sessionRes.json() : null;
+
+      if (!sessionData?.session) {
         setUser(null);
         return;
       }

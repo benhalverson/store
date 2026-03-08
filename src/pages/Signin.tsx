@@ -41,7 +41,6 @@ const Signin = () => {
         credentials: "include",
         body: JSON.stringify(data),
       });
-
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as {
           message?: string;
@@ -49,7 +48,6 @@ const Signin = () => {
         };
         throw new Error(body.message || body.code || "Invalid credentials");
       }
-
       await fetchUser();
       toast.success("Signed in!", { id: toastId });
       navigate("/profile");
