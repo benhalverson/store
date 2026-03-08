@@ -88,7 +88,9 @@ describe("Signup", () => {
         expect.anything(),
       ),
     );
-    expect(screen.queryByText(/add a passkey to my account/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/add a passkey to my account/i),
+    ).not.toBeInTheDocument();
   });
 
   it("shows backend error when register options request fails", async () => {

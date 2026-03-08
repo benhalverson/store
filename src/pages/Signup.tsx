@@ -30,13 +30,11 @@ const getErrorMessage = async (response: Response, fallback: string) => {
     }
 
     return null;
-  })()) as
-    | {
-        message?: string;
-        code?: string;
-        error?: string;
-      }
-    | null;
+  })()) as {
+    message?: string;
+    code?: string;
+    error?: string;
+  } | null;
 
   if (body) {
     return body.message || body.error || body.code || fallback;
@@ -170,7 +168,9 @@ const Signup = () => {
 
       const authenticatedUser = await fetchUser();
       if (!authenticatedUser) {
-        throw new Error("Passkey registered, but session could not be confirmed");
+        throw new Error(
+          "Passkey registered, but session could not be confirmed",
+        );
       }
 
       toast.success("Passkey registered successfully!", { id: toastId });

@@ -25,8 +25,7 @@ vi.mock("react-hot-toast", () => {
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("react-router-dom")>();
+  const actual = await importOriginal<typeof import("react-router-dom")>();
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -165,7 +164,8 @@ describe("Signin – passkey tab", () => {
       getClientExtensionResults: () => ({}),
     } as unknown as PublicKeyCredential;
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce({
         ok: true,
         json: async () => fakeOptions,
@@ -175,9 +175,9 @@ describe("Signin – passkey tab", () => {
         json: async () => ({ verified: true }),
       } as Response);
 
-    (navigator.credentials.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      fakeCredential,
-    );
+    (
+      navigator.credentials.get as ReturnType<typeof vi.fn>
+    ).mockResolvedValueOnce(fakeCredential);
     mockFetchUser.mockResolvedValueOnce({ email: "user@example.com" });
 
     const user = await switchToPasskeyTab();
