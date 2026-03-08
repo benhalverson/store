@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { loadStripe, type PaymentIntentResult } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
-  useStripe,
   useElements,
+  useStripe,
 } from "@stripe/react-stripe-js";
+import { loadStripe, type PaymentIntentResult } from "@stripe/stripe-js";
+import { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
 const stripePromise = loadStripe(publishableKey);
@@ -79,9 +79,7 @@ export default function PaymentPage() {
   }
 
   if (!clientSecret) {
-    return (
-      <div className="p-8 text-center">No payment session available.</div>
-    );
+    return <div className="p-8 text-center">No payment session available.</div>;
   }
 
   const options = useMemo(() => ({ clientSecret }), [clientSecret]);
