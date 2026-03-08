@@ -55,14 +55,16 @@ describe("Signin – password tab", () => {
       ok: true,
       json: async () => ({}),
     } as Response);
-    mockFetchUser.mockResolvedValueOnce(undefined);
+    mockFetchUser.mockResolvedValueOnce({ email: "user@example.com" });
 
     renderSignin();
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText(/email/i), "user@example.com");
     await user.type(screen.getByLabelText(/password/i), "password123");
-    await user.click(screen.getByRole("button", { name: /sign in with password/i }));
+    await user.click(
+      screen.getByRole("button", { name: /sign in with password/i }),
+    );
 
     await waitFor(() => expect(mockFetchUser).toHaveBeenCalledTimes(1));
     expect(mockNavigate).toHaveBeenCalledWith("/profile");
@@ -81,7 +83,9 @@ describe("Signin – password tab", () => {
 
     await user.type(screen.getByLabelText(/email/i), "bad@example.com");
     await user.type(screen.getByLabelText(/password/i), "wrongpassword");
-    await user.click(screen.getByRole("button", { name: /sign in with password/i }));
+    await user.click(
+      screen.getByRole("button", { name: /sign in with password/i }),
+    );
 
     await waitFor(() =>
       expect(toast.default.error).toHaveBeenCalledWith(
@@ -174,7 +178,7 @@ describe("Signin – passkey tab", () => {
     (navigator.credentials.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       fakeCredential,
     );
-    mockFetchUser.mockResolvedValueOnce(undefined);
+    mockFetchUser.mockResolvedValueOnce({ email: "user@example.com" });
 
     const user = await switchToPasskeyTab();
     await user.click(screen.getByRole("button", { name: /passkey login/i }));

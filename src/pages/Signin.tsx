@@ -48,7 +48,12 @@ const Signin = () => {
         };
         throw new Error(body.message || body.code || "Invalid credentials");
       }
-      await fetchUser();
+
+      const authenticatedUser = await fetchUser();
+      if (!authenticatedUser) {
+        throw new Error("Session could not be confirmed");
+      }
+
       toast.success("Signed in!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {
@@ -82,27 +87,29 @@ const Signin = () => {
         );
       }
 
-      const options =
-        (await optionsRes.json()) as PublicKeyCredentialRequestOptions & {
-          challenge: string;
-          allowCredentials?: Array<{ id: string; type: string }>;
-        };
+      const rawOptions = (await optionsRes.json()) as {
+        challenge: string;
+        timeout?: number;
+        rpId?: string;
+        userVerification?: UserVerificationRequirement;
+        allowCredentials?: Array<{
+          id: string;
+          type: PublicKeyCredentialType;
+          transports?: AuthenticatorTransport[];
+        }>;
+      };
 
-      // @ts-expect-error
-      options.challenge = base64urlToUint8Array(
-        options.challenge as unknown as string,
-      ).buffer;
-      // @ts-expect-error
-      options.allowCredentials = options.allowCredentials?.map((cred) => ({
-        ...cred,
-        id:
-          typeof cred.id === "string"
-            ? base64urlToUint8Array(cred.id)
-            : cred.id,
-      }));
+      const publicKey: PublicKeyCredentialRequestOptions = {
+        ...rawOptions,
+        challenge: base64urlToUint8Array(rawOptions.challenge),
+        allowCredentials: rawOptions.allowCredentials?.map((cred) => ({
+          ...cred,
+          id: base64urlToUint8Array(cred.id),
+        })),
+      };
 
       const credential = (await navigator.credentials.get({
-        publicKey: options,
+        publicKey,
       })) as PublicKeyCredential | null;
 
       if (!credential) throw new Error("User cancelled passkey login");
@@ -144,7 +151,11 @@ const Signin = () => {
         );
       }
 
-      await fetchUser();
+      const authenticatedUser = await fetchUser();
+      if (!authenticatedUser) {
+        throw new Error("Session could not be confirmed");
+      }
+
       toast.success("Passkey login successful!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {

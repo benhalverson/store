@@ -13,11 +13,13 @@ interface User {
   lastName?: string;
 }
 
+type FetchUserResult = User | null;
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   setUser: (user: User | null) => void;
-  fetchUser: () => Promise<void>;
+  fetchUser: () => Promise<FetchUserResult>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -26,28 +28,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+  const fetchUser = async (): Promise<FetchUserResult> => {
     try {
       const sessionRes = await fetch(`${BASE_URL}/api/auth/get-session`, {
         credentials: "include",
       });
-      const sessionData = sessionRes.ok ? await sessionRes.json() : null;
+
+      if (!sessionRes.ok) {
+        throw new Error("Failed to fetch session");
+      }
+
+      const sessionData = await sessionRes.json();
 
       if (!sessionData?.session) {
         setUser(null);
-        return;
+        return null;
       }
+
       const profileRes = await fetch(`${BASE_URL}/profile`, {
         credentials: "include",
       });
-      if (profileRes.ok) {
-        const data: any = await profileRes.json();
-        setUser(data);
-      } else {
-        setUser(null);
+
+      if (!profileRes.ok) {
+        throw new Error("Failed to fetch profile");
       }
-    } catch {
+
+      const data: User = await profileRes.json();
+      setUser(data);
+      return data;
+    } catch (error) {
       setUser(null);
+      throw error instanceof Error ? error : new Error("Failed to fetch user");
     } finally {
       setLoading(false);
     }
@@ -55,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: TODO: useEventEffect in 19
   useEffect(() => {
-    fetchUser();
+    fetchUser().catch(() => undefined);
   }, []);
 
   return (

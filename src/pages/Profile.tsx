@@ -16,7 +16,7 @@ const Info = ({
     <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
       {label}
     </span>
-    <span className="mt-1 text-sm text-gray-900 dark:text-gray-100 break-words">
+    <span className="mt-1 text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
       {value === undefined || value === null || value === "" ? (
         <span className="text-gray-400">—</span>
       ) : (
@@ -163,7 +163,7 @@ const Profile = () => {
     const res = await fetch(`${BASE_URL}/api/auth/passkey/delete-passkey`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      credentials: "include",
       body: JSON.stringify({ id }),
     });
 

@@ -1,12 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
 import { useAuth } from "../context/AuthContext";
-import { base64urlToUint8Array } from "../utils/webauthn";
+import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
 
 const schema = z.object({
   email: z.email({ error: "Invalid email" }),
@@ -14,6 +14,37 @@ const schema = z.object({
 });
 
 type SignupFormData = z.infer<typeof schema>;
+
+const getErrorMessage = async (response: Response, fallback: string) => {
+  const body = (await (async () => {
+    try {
+      if (typeof response.clone === "function") {
+        return await response.clone().json();
+      }
+
+      if (typeof response.json === "function") {
+        return await response.json();
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  })()) as
+    | {
+        message?: string;
+        code?: string;
+        error?: string;
+      }
+    | null;
+
+  if (body) {
+    return body.message || body.error || body.code || fallback;
+  }
+
+  const text = await response.text().catch(() => "");
+  return text || fallback;
+};
 
 const Signup = () => {
   const resolver = zodResolver(schema);
@@ -39,9 +70,15 @@ const Signup = () => {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Signup failed");
+      if (!res.ok) {
+        throw new Error(await getErrorMessage(res, "Signup failed"));
+      }
 
-      await fetchUser();
+      const authenticatedUser = await fetchUser();
+      if (!authenticatedUser) {
+        throw new Error("Account created, but session could not be confirmed");
+      }
+
       toast.success("Account created!", { id: toastId });
       setAccountCreated(true);
     } catch (err: unknown) {
@@ -61,7 +98,14 @@ const Signup = () => {
         `${BASE_URL}/api/auth/passkey/generate-register-options`,
         { credentials: "include" },
       );
-      if (!optionsRes.ok) throw new Error("Failed to get registration options");
+      if (!optionsRes.ok) {
+        throw new Error(
+          await getErrorMessage(
+            optionsRes,
+            "Failed to get registration options",
+          ),
+        );
+      }
 
       const rawOptions = (await optionsRes.json()) as {
         challenge: string;
@@ -88,19 +132,13 @@ const Signup = () => {
       const attestationResponse =
         credential.response as AuthenticatorAttestationResponse;
 
-      const bufToBase64url = (buf: ArrayBuffer): string =>
-        btoa(String.fromCharCode(...new Uint8Array(buf)))
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=+$/, "");
-
       const serialized = {
         id: credential.id,
-        rawId: bufToBase64url(credential.rawId),
+        rawId: bufferToBase64url(credential.rawId),
         type: credential.type,
         response: {
-          clientDataJSON: bufToBase64url(attestationResponse.clientDataJSON),
-          attestationObject: bufToBase64url(
+          clientDataJSON: bufferToBase64url(attestationResponse.clientDataJSON),
+          attestationObject: bufferToBase64url(
             attestationResponse.attestationObject,
           ),
           transports: attestationResponse.getTransports
@@ -124,9 +162,17 @@ const Signup = () => {
           body: JSON.stringify(verifyPayload),
         },
       );
-      if (!verifyRes.ok) throw new Error("Passkey registration failed");
+      if (!verifyRes.ok) {
+        throw new Error(
+          await getErrorMessage(verifyRes, "Passkey registration failed"),
+        );
+      }
 
-      await fetchUser();
+      const authenticatedUser = await fetchUser();
+      if (!authenticatedUser) {
+        throw new Error("Passkey registered, but session could not be confirmed");
+      }
+
       toast.success("Passkey registered successfully!", { id: toastId });
       navigate("/profile");
     } catch (err: unknown) {
