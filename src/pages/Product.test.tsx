@@ -6,10 +6,8 @@ import {
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Suspense } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { vi } from "vitest";
-import ProductPage from "./Product";
 
 // Ensure BASE_URL/DOMAIN never point to real endpoints in tests
 vi.mock("../config", () => ({
@@ -44,7 +42,7 @@ vi.mock("../components/Gallery", () => ({
   ),
 }));
 
-vi.mock("../components/ColorPicker", () => ({
+vi.mock("../components/ColorPickerWrapper", () => ({
   default: ({ filamentType }: { filamentType: string }) => (
     <div data-testid="color-picker">Color Picker for {filamentType}</div>
   ),
@@ -78,6 +76,8 @@ vi.mock("../context/CartContext", () => ({
   }),
 }));
 
+const mockColorDispatch = vi.fn();
+
 vi.mock("../context/ColorContext", () => ({
   useColorContext: () => ({
     state: {
@@ -86,12 +86,18 @@ vi.mock("../context/ColorContext", () => ({
       isLoading: false,
       hasInitialized: true,
     },
-    dispatch: vi.fn(),
+    dispatch: mockColorDispatch,
   }),
 }));
 
 describe("ProductPage", () => {
-  beforeEach(async () => {
+  let ProductPage: (typeof import("./Product"))["default"];
+
+  beforeAll(async () => {
+    ({ default: ProductPage } = await import("./Product"));
+  });
+
+  const renderProductPage = async () => {
     // ✅ Mock fetch with a complete Product response
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
@@ -114,11 +120,7 @@ describe("ProductPage", () => {
       [
         {
           path: "/product/:id",
-          element: (
-            <Suspense fallback={<div>Loading...</div>}>
-              <ProductPage />
-            </Suspense>
-          ),
+          element: <ProductPage />,
         },
       ],
       {
@@ -133,14 +135,18 @@ describe("ProductPage", () => {
       screen.queryByText(/Loading product/i),
     );
     await screen.findByText("RC Wheels");
-  });
+
+    return userEvent.setup();
+  };
 
   afterEach(() => {
     vi.restoreAllMocks();
+    mockColorDispatch.mockReset();
   });
 
-  it("renders ProductPage with product details", async () => {
-    expect(await screen.findByText("RC Wheels")).toBeInTheDocument();
+  it("renders product details and supporting controls", async () => {
+    await renderProductPage();
+
     expect(screen.getByText("$35")).toBeInTheDocument();
     expect(screen.getByText("Description")).toBeInTheDocument();
     expect(
@@ -148,61 +154,29 @@ describe("ProductPage", () => {
         "This is a 12mm RC buggy wheel that will fit any modern buggy for 1/10 scale racing.",
       ),
     ).toBeInTheDocument();
-  });
-
-  it("renders PreviewComponent in a Suspense wrapper", async () => {
     expect(await screen.findByTestId("preview-component")).toBeInTheDocument();
-  });
 
-  it("displays the initial filament type as PLA", async () => {
-    const filamentDropdown = await screen.findByTestId("filament-dropdown");
+    const filamentDropdown = screen.getByTestId("filament-dropdown");
     expect(filamentDropdown).toHaveValue("PLA");
+
+    expect(await screen.findByRole("button", { name: "Add to cart" })).toBeInTheDocument();
+    expect(await screen.findByTestId("color-picker")).toHaveTextContent(
+      "Color Picker for PLA",
+    );
   });
 
   it("updates filament selection when dropdown value changes", async () => {
-    const user = userEvent.setup();
+    const user = await renderProductPage();
+    const select = screen.getByTestId("filament-dropdown");
 
-    // Make sure the product is fully loaded in THIS test's async turn
-    await screen.findByText("RC Wheels");
-
-    const select = await screen.findByTestId("filament-dropdown");
-
-    // Sanity check initial value
     expect(select).toHaveValue("PLA");
 
-    // Change selection using the actual option node
-    await user.selectOptions(
-      select,
-      screen.getByRole("option", { name: "PETG" }),
-    );
+    await user.selectOptions(select, screen.getByRole("option", { name: "PETG" }));
 
-    // Re-assert on the SAME select after state settles
-    await screen.findByTestId("filament-dropdown"); // forces re-query in case of remounts
     await waitFor(() => expect(select).toHaveValue("PETG"));
-  });
-
-  it.skip("passes selected filament to ColorPicker", async () => {
-    const colorPicker = await screen.findByTestId("color-picker");
-    expect(colorPicker).toHaveTextContent("Color Picker for PLA");
-  });
-
-  it.skip("updates ColorPicker filamentType when filament selection changes", async () => {
-    const user = userEvent.setup();
-    const filamentDropdown = await screen.findByTestId("filament-dropdown");
-    await user.selectOptions(
-      filamentDropdown,
-      screen.getByRole("option", { name: "PETG" }),
-    );
 
     expect(await screen.findByTestId("color-picker")).toHaveTextContent(
       "Color Picker for PETG",
     );
-  });
-
-  it("renders Add to cart button", async () => {
-    const addToCartButton = await screen.findByRole("button", {
-      name: "Add to cart",
-    });
-    expect(addToCartButton).toBeInTheDocument();
   });
 });
