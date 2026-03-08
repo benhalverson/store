@@ -28,5 +28,4 @@ dist-ssr
 .env
 .env.local
 
-coverage/package-lock.json
-package-lock.json
+coverage/
