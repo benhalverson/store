@@ -4,6 +4,25 @@ import InputField from "../components/InputField";
 import { BASE_URL } from "../config";
 import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
 
+interface PasskeyAuthenticator {
+  credentialId: string;
+}
+
+interface ProfileFormData extends Profile {
+  shippingAddress?: string;
+}
+
+interface ProfileUpdateErrorDetail {
+  message?: string;
+  path?: string[];
+  code?: string;
+}
+
+interface ProfileUpdateErrorResponse {
+  error?: string;
+  details?: ProfileUpdateErrorDetail[];
+}
+
 // Small internal display component for read-only profile fields
 const Info = ({
   label,
@@ -28,11 +47,13 @@ const Info = ({
 
 const Profile = () => {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
-  const [authenticators, setAuthenticators] = useState<any[]>([]);
+  const [authenticators, setAuthenticators] = useState<PasskeyAuthenticator[]>(
+    [],
+  );
   const [message, setMessage] = useState<string>(""); // kept for passkey flows
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState<Partial<Profile>>({});
+  const [form, setForm] = useState<Partial<ProfileFormData>>({});
   const [error, setError] = useState<string>("");
 
   const getProfile = async () => {
@@ -44,8 +65,8 @@ const Profile = () => {
       const data = (await res.json()) as Profile;
       setProfile(data);
       setForm(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load profile");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     }
   };
 
@@ -54,7 +75,7 @@ const Profile = () => {
       credentials: "include",
     });
     if (!res.ok) throw new Error("Failed to fetch authenticators");
-    const data: any[] = await res.json();
+    const data = (await res.json()) as PasskeyAuthenticator[];
     setAuthenticators(data);
   };
 
@@ -80,10 +101,11 @@ const Profile = () => {
         return;
       }
 
-      const options = (await beginRes.json()) as PublicKeyCredentialCreationOptions & {
-        challenge: string;
-        user: { id: string; [key: string]: unknown };
-      };
+      const options =
+        (await beginRes.json()) as PublicKeyCredentialCreationOptions & {
+          challenge: string;
+          user: { id: string; [key: string]: unknown };
+        };
 
       const publicKey: PublicKeyCredentialCreationOptions = {
         ...options,
@@ -144,9 +166,7 @@ const Profile = () => {
           message?: string;
           code?: string;
         };
-        setMessage(
-          body.message || body.code || "Passkey registration failed",
-        );
+        setMessage(body.message || body.code || "Passkey registration failed");
         return;
       }
 
@@ -210,9 +230,9 @@ const Profile = () => {
       ...profile,
       ...form,
       shippingAddress:
-        (form as any).shippingAddress ||
-        (form as any).address ||
-        (profile as any).shippingAddress ||
+        form.shippingAddress ||
+        form.address ||
+        (profile as ProfileFormData).shippingAddress ||
         profile.address,
     };
     const toastId = toast.loading("Saving profile...");
@@ -227,11 +247,11 @@ const Profile = () => {
       if (!res.ok) {
         let detailsMsg = "Failed to update profile";
         try {
-          const data: any = await res.json();
+          const data = (await res.json()) as ProfileUpdateErrorResponse;
           if (data?.error) detailsMsg = data.error;
           if (data?.details && Array.isArray(data.details)) {
             const list = data.details
-              .map((d: any) => d.message || `${d.path?.join(".")}: ${d.code}`)
+              .map((d) => d.message || `${d.path?.join(".")}: ${d.code}`)
               .join("; ");
             if (list) detailsMsg += `: ${list}`;
           }
@@ -247,9 +267,9 @@ const Profile = () => {
       setForm(updated);
       setIsEditing(false);
       toast.success("Profile updated", { id: toastId });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating profile:", err);
-      const msg = err.message || "Update failed";
+      const msg = err instanceof Error ? err.message : "Update failed";
       setError(msg);
       toast.error(msg, { id: toastId });
     } finally {
@@ -295,10 +315,10 @@ const Profile = () => {
             <Info label="Phone" value={profile.phone} />
             <Info label="First Name" value={profile.firstName} />
             <Info label="Last Name" value={profile.lastName} />
-            {(profile as any).shippingAddress && (
+            {(profile as ProfileFormData).shippingAddress && (
               <Info
                 label="Shipping Address"
-                value={(profile as any).shippingAddress}
+                value={(profile as ProfileFormData).shippingAddress}
               />
             )}
             <Info label="City" value={profile.city} />
@@ -343,9 +363,7 @@ const Profile = () => {
             <InputField
               id="shippingAddress"
               label="Shipping Address"
-              value={
-                (form as any).shippingAddress || (form as any).address || ""
-              }
+              value={form.shippingAddress || form.address || ""}
               onChange={handleChange}
             />
             <InputField
@@ -409,7 +427,7 @@ const Profile = () => {
           </p>
         )}
         <ul className="space-y-2">
-          {authenticators.map((auth: any) => (
+          {authenticators.map((auth) => (
             <li
               key={auth.credentialId}
               className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800">

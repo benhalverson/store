@@ -28,7 +28,7 @@ function PaymentForm() {
         elements,
         confirmParams: {
           // You can change return_url to an order confirmation route
-          return_url: window.location.origin + "/order/complete",
+          return_url: `${window.location.origin}/order/complete`,
         },
         redirect: "if_required",
       });
@@ -69,6 +69,10 @@ export default function PaymentPage() {
   // Prefer router state (in-memory) to avoid exposing secrets in the URL.
   const state = (loc.state as { clientSecret?: string } | null) ?? null;
   const clientSecret = state?.clientSecret ?? q.get("client_secret");
+  const options = useMemo(
+    () => (clientSecret ? { clientSecret } : undefined),
+    [clientSecret],
+  );
 
   if (!publishableKey) {
     return (
@@ -81,8 +85,6 @@ export default function PaymentPage() {
   if (!clientSecret) {
     return <div className="p-8 text-center">No payment session available.</div>;
   }
-
-  const options = useMemo(() => ({ clientSecret }), [clientSecret]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
