@@ -13,6 +13,10 @@ interface User {
   lastName?: string;
 }
 
+interface SessionResponse {
+  session?: unknown;
+}
+
 type FetchUserResult = User | null;
 
 interface AuthContextType {
@@ -38,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Failed to fetch session");
       }
 
-      const sessionData = await sessionRes.json();
+      const sessionData: SessionResponse = await sessionRes.json();
 
       if (!sessionData?.session) {
         setUser(null);

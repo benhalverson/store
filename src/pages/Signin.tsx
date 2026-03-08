@@ -101,11 +101,15 @@ const Signin = () => {
 
       const publicKey: PublicKeyCredentialRequestOptions = {
         ...rawOptions,
-        challenge: base64urlToUint8Array(rawOptions.challenge),
-        allowCredentials: rawOptions.allowCredentials?.map((cred) => ({
-          ...cred,
-          id: base64urlToUint8Array(cred.id),
-        })),
+        challenge: base64urlToUint8Array(
+          rawOptions.challenge,
+        ) as BufferSource as ArrayBuffer,
+        allowCredentials: rawOptions.allowCredentials
+          ? (rawOptions.allowCredentials.map((cred) => ({
+              ...cred,
+              id: base64urlToUint8Array(cred.id) as BufferSource as ArrayBuffer,
+            })) as PublicKeyCredentialDescriptor[])
+          : undefined,
       };
 
       const credential = (await navigator.credentials.get({
