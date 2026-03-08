@@ -1,11 +1,12 @@
-import { Tab } from "@headlessui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
-import { base64urlToUint8Array, bufferToBase64 } from "../utils/webauthn";
+import { useAuth } from "../context/AuthContext";
+import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
 
 const schema = z.object({
   email: z.email({ error: "Invalid email" }),
@@ -14,22 +15,52 @@ const schema = z.object({
 
 type SignupFormData = z.infer<typeof schema>;
 
+const getErrorMessage = async (response: Response, fallback: string) => {
+  const body = (await (async () => {
+    try {
+      if (typeof response.clone === "function") {
+        return await response.clone().json();
+      }
+
+      if (typeof response.json === "function") {
+        return await response.json();
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  })()) as {
+    message?: string;
+    code?: string;
+    error?: string;
+  } | null;
+
+  if (body) {
+    return body.message || body.error || body.code || fallback;
+  }
+
+  const text = await response.text().catch(() => "");
+  return text || fallback;
+};
+
 const Signup = () => {
   const resolver = zodResolver(schema);
   const navigate = useNavigate();
+  const { fetchUser } = useAuth();
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [passkeyRegistering, setPasskeyRegistering] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    getValues,
-    reset,
   } = useForm<SignupFormData>({
     resolver,
   });
 
   const handlePasswordSignup = async (data: SignupFormData) => {
-    const toastId = toast.loading("Signing up...");
+    const toastId = toast.loading("Creating account...");
     try {
       const res = await fetch(`${BASE_URL}/auth/signup`, {
         method: "POST",
@@ -37,10 +68,17 @@ const Signup = () => {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Signup failed");
+      if (!res.ok) {
+        throw new Error(await getErrorMessage(res, "Signup failed"));
+      }
 
-      toast.success("Signup successful!", { id: toastId });
-      navigate("/profile");
+      const authenticatedUser = await fetchUser();
+      if (!authenticatedUser) {
+        throw new Error("Account created, but session could not be confirmed");
+      }
+
+      toast.success("Account created!", { id: toastId });
+      setAccountCreated(true);
     } catch (err: unknown) {
       if (err instanceof Error) {
         toast.error(`Error: ${err.message}`, { id: toastId });
@@ -50,74 +88,101 @@ const Signup = () => {
     }
   };
 
-  const handlePasskeyOnlySignup = async () => {
-    const email = getValues("email");
-    if (!email) return toast.error("Please enter an email");
-
-    const toastId = toast.loading("Creating passkey account...");
+  const handlePasskeyRegistration = async () => {
+    setPasskeyRegistering(true);
+    const toastId = toast.loading("Registering passkey...");
     try {
-      const res = await fetch(`${BASE_URL}/auth/signup-passkey-only`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error("Failed to initiate passkey signup");
-
-      // Begin WebAuthn registration
-      const beginRes = await fetch(`${BASE_URL}/webauthn/register/begin`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!beginRes.ok)
-        throw new Error("Failed to begin WebAuthn registration");
-
-      const options =
-        (await beginRes.json()) as PublicKeyCredentialCreationOptions;
-
-      // @ts-ignore
-      options.challenge = base64urlToUint8Array(
-        options.challenge as unknown as string,
+      const optionsRes = await fetch(
+        `${BASE_URL}/api/auth/passkey/generate-register-options`,
+        { credentials: "include" },
       );
-      // @ts-ignore
-      options.user.id = base64urlToUint8Array(
-        options.user.id as unknown as string,
-      );
+      if (!optionsRes.ok) {
+        throw new Error(
+          await getErrorMessage(
+            optionsRes,
+            "Failed to get registration options",
+          ),
+        );
+      }
+
+      const rawOptions = (await optionsRes.json()) as {
+        challenge: string;
+        user: { id: string; name: string; displayName: string };
+        [key: string]: unknown;
+      };
+
+      const options = {
+        ...rawOptions,
+        challenge: base64urlToUint8Array(rawOptions.challenge).slice(0)
+          .buffer as ArrayBuffer,
+        user: {
+          ...rawOptions.user,
+          id: base64urlToUint8Array(rawOptions.user.id).slice(0)
+            .buffer as ArrayBuffer,
+        },
+      } as unknown as PublicKeyCredentialCreationOptions;
 
       const credential = (await navigator.credentials.create({
         publicKey: options,
-      })) as PublicKeyCredential;
-      if (!credential) throw new Error("User cancelled credential creation");
+      })) as PublicKeyCredential | null;
+      if (!credential) throw new Error("Passkey creation was cancelled");
 
-      const response = credential.response as AuthenticatorAttestationResponse;
+      const attestationResponse =
+        credential.response as AuthenticatorAttestationResponse;
 
-      const formatted = {
+      const serialized = {
         id: credential.id,
-        rawId: bufferToBase64(credential.rawId),
+        rawId: bufferToBase64url(credential.rawId),
         type: credential.type,
         response: {
-          clientDataJSON: bufferToBase64(response.clientDataJSON),
-          attestationObject: bufferToBase64(response.attestationObject),
+          clientDataJSON: bufferToBase64url(attestationResponse.clientDataJSON),
+          attestationObject: bufferToBase64url(
+            attestationResponse.attestationObject,
+          ),
+          transports: attestationResponse.getTransports
+            ? attestationResponse.getTransports()
+            : [],
         },
+        clientExtensionResults: credential.getClientExtensionResults(),
       };
 
-      const finishRes = await fetch(`${BASE_URL}/webauthn/register/finish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(formatted),
-      });
-      if (!finishRes.ok) throw new Error("Failed to finish WebAuthn");
+      const verifyPayload = {
+        response: serialized,
+        credentialId: serialized.id,
+      };
 
-      toast.success("Passkey signup complete!", { id: toastId });
+      const verifyRes = await fetch(
+        `${BASE_URL}/api/auth/passkey/verify-registration`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(verifyPayload),
+        },
+      );
+      if (!verifyRes.ok) {
+        throw new Error(
+          await getErrorMessage(verifyRes, "Passkey registration failed"),
+        );
+      }
+
+      const authenticatedUser = await fetchUser();
+      if (!authenticatedUser) {
+        throw new Error(
+          "Passkey registered, but session could not be confirmed",
+        );
+      }
+
+      toast.success("Passkey registered successfully!", { id: toastId });
       navigate("/profile");
-      reset();
     } catch (err: unknown) {
       if (err instanceof Error) {
         toast.error(`Error: ${err.message}`, { id: toastId });
       } else {
         toast.error("An unknown error occurred", { id: toastId });
       }
+    } finally {
+      setPasskeyRegistering(false);
     }
   };
 
@@ -127,105 +192,71 @@ const Signup = () => {
         Sign Up
       </h2>
 
-      <Tab.Group>
-        <Tab.List className="flex space-x-1 rounded-lg bg-gray-200 dark:bg-gray-800 p-1 mb-4">
-          <Tab
-            className={({ selected }) =>
-              `w-full py-2 text-sm font-medium rounded-lg focus:outline-none ${
-                selected
-                  ? "bg-blue-600 text-white"
-                  : "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-              }`
-            }>
-            Password
-          </Tab>
-          <Tab
-            className={({ selected }) =>
-              `w-full py-2 text-sm font-medium rounded-lg focus:outline-none ${
-                selected
-                  ? "bg-blue-600 text-white"
-                  : "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-              }`
-            }>
-            Passkey Only
-          </Tab>
-        </Tab.List>
+      {!accountCreated ? (
+        <form
+          onSubmit={handleSubmit(handlePasswordSignup)}
+          className="space-y-4">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              {...register("email")}
+              className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:text-white"
+            />
+            {errors.email && (
+              <p className="text-sm text-red-600">{errors.email.message}</p>
+            )}
+          </div>
 
-        <Tab.Panels>
-          <Tab.Panel>
-            <form
-              onSubmit={handleSubmit(handlePasswordSignup)}
-              className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  {...register("email")}
-                  className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:text-white"
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email.message}</p>
-                )}
-              </div>
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              {...register("password")}
+              className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:text-white"
+            />
+            {errors.password && (
+              <p className="text-sm text-red-600">{errors.password.message}</p>
+            )}
+          </div>
 
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  {...register("password")}
-                  className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:text-white"
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-600">
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2 bg-blue-600 text-white rounded-md">
-                Sign Up with Password
-              </button>
-            </form>
-          </Tab.Panel>
-
-          <Tab.Panel>
-            <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="emailS"
-                  className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  {...register("email")}
-                  className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:text-white"
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email.message}</p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={handlePasskeyOnlySignup}
-                className="w-full py-2 bg-gray-800 text-white rounded-md">
-                Register with Passkey Only
-              </button>
-            </div>
-          </Tab.Panel>
-        </Tab.Panels>
-      </Tab.Group>
+          <button
+            type="submit"
+            className="w-full py-2 bg-blue-600 text-white rounded-md">
+            Sign Up
+          </button>
+        </form>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Your account has been created and you are signed in. Would you like
+            to add a passkey for faster, passwordless sign-in in the future?
+          </p>
+          <button
+            type="button"
+            onClick={handlePasskeyRegistration}
+            disabled={passkeyRegistering}
+            className="w-full py-2 bg-gray-800 text-white rounded-md disabled:opacity-50">
+            Add Passkey to My Account
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="w-full py-2 border border-gray-400 text-gray-700 dark:text-gray-300 rounded-md">
+            Skip for Now
+          </button>
+        </div>
+      )}
     </div>
   );
 };

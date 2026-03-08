@@ -57,20 +57,40 @@ function isObject(val: unknown): val is Record<string, unknown> {
   return typeof val === "object" && val !== null;
 }
 
-function parsePaymentIntentResponse(obj: unknown): PaymentIntentResponse | null {
+function parsePaymentIntentResponse(
+  obj: unknown,
+): PaymentIntentResponse | null {
   if (!isObject(obj)) return null;
   const record = obj as Record<string, unknown>;
-  const checkout_url = typeof record.checkout_url === "string" ? record.checkout_url : undefined;
-  const clientSecret = typeof record.clientSecret === "string" ? record.clientSecret : undefined;
-  const client_secret = typeof record.client_secret === "string" ? record.client_secret : undefined;
+  const checkout_url =
+    typeof record.checkout_url === "string" ? record.checkout_url : undefined;
+  const clientSecret =
+    typeof record.clientSecret === "string" ? record.clientSecret : undefined;
+  const client_secret =
+    typeof record.client_secret === "string" ? record.client_secret : undefined;
   const amount = typeof record.amount === "number" ? record.amount : undefined;
-  const currency = typeof record.currency === "string" ? record.currency : undefined;
+  const currency =
+    typeof record.currency === "string" ? record.currency : undefined;
   const orderId =
     typeof record.orderId === "string" || typeof record.orderId === "number"
       ? (record.orderId as string | number)
       : undefined;
-  if (checkout_url || clientSecret || client_secret || amount || currency || orderId)
-    return { checkout_url, clientSecret, client_secret, amount, currency, orderId };
+  if (
+    checkout_url ||
+    clientSecret ||
+    client_secret ||
+    amount ||
+    currency ||
+    orderId
+  )
+    return {
+      checkout_url,
+      clientSecret,
+      client_secret,
+      amount,
+      currency,
+      orderId,
+    };
   return null;
 }
 
@@ -216,7 +236,9 @@ export default function Checkout() {
       });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Payment intent request failed (${res.status}): ${text}`);
+        throw new Error(
+          `Payment intent request failed (${res.status}): ${text}`,
+        );
       }
       const dataJson: unknown = await res.json();
       const data = parsePaymentIntentResponse(dataJson);
@@ -240,7 +262,9 @@ export default function Checkout() {
         navigate(`/order/${data.orderId}`);
       }
     } catch (err: unknown) {
-      setCartError(err instanceof Error ? err.message : "Payment intent failed");
+      setCartError(
+        err instanceof Error ? err.message : "Payment intent failed",
+      );
     } finally {
       setCartLoading(false);
     }

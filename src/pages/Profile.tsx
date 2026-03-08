@@ -1,7 +1,29 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import InputField from "../components/InputField";
-import { BASE_URL, DOMAIN } from "../config";
+import { BASE_URL } from "../config";
+import { base64urlToUint8Array, bufferToBase64url } from "../utils/webauthn";
+
+interface PasskeyAuthenticator {
+  credentialID?: string;
+  credentialId?: string;
+  id?: string;
+}
+
+interface ProfileFormData extends Profile {
+  shippingAddress?: string;
+}
+
+interface ProfileUpdateErrorDetail {
+  message?: string;
+  path?: string[];
+  code?: string;
+}
+
+interface ProfileUpdateErrorResponse {
+  error?: string;
+  details?: ProfileUpdateErrorDetail[];
+}
 
 // Small internal display component for read-only profile fields
 const Info = ({
@@ -15,7 +37,7 @@ const Info = ({
     <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
       {label}
     </span>
-    <span className="mt-1 text-sm text-gray-900 dark:text-gray-100 break-words">
+    <span className="mt-1 text-sm text-gray-900 dark:text-gray-100 wrap-break-word">
       {value === undefined || value === null || value === "" ? (
         <span className="text-gray-400">—</span>
       ) : (
@@ -27,11 +49,13 @@ const Info = ({
 
 const Profile = () => {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
-  const [authenticators, setAuthenticators] = useState<any[]>([]);
+  const [authenticators, setAuthenticators] = useState<PasskeyAuthenticator[]>(
+    [],
+  );
   const [message, setMessage] = useState<string>(""); // kept for passkey flows
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState<Partial<Profile>>({});
+  const [form, setForm] = useState<Partial<ProfileFormData>>({});
   const [error, setError] = useState<string>("");
 
   const getProfile = async () => {
@@ -43,113 +67,108 @@ const Profile = () => {
       const data = (await res.json()) as Profile;
       setProfile(data);
       setForm(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load profile");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     }
   };
 
   const getAuthenticators = async () => {
-    const res = await fetch(`${BASE_URL}/webauthn/authenticators`, {
+    const res = await fetch(`${BASE_URL}/api/auth/passkey/list-user-passkeys`, {
       credentials: "include",
     });
     if (!res.ok) throw new Error("Failed to fetch authenticators");
-    const data: any[] = await res.json();
+    const data = (await res.json()) as PasskeyAuthenticator[];
     setAuthenticators(data);
   };
 
   const handleAddPasskey = async () => {
     try {
       setMessage("Starting passkey registration...");
-      const beginRes = await fetch(`${BASE_URL}/webauthn/register/begin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: profile?.email }),
-      });
+      const beginRes = await fetch(
+        `${BASE_URL}/api/auth/passkey/generate-register-options`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
 
       if (!beginRes.ok) {
-        setMessage("Begin registration failed");
+        const body = (await beginRes.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+        setMessage(
+          body.message || body.code || "Failed to get registration options",
+        );
         return;
       }
 
-      const options = (await beginRes.json()) as {
-        challenge: string;
-        user: { id: string; [key: string]: any };
-        [key: string]: any;
+      const options =
+        (await beginRes.json()) as PublicKeyCredentialCreationOptions & {
+          challenge: string;
+          user: { id: string; [key: string]: unknown };
+        };
+
+      const publicKey: PublicKeyCredentialCreationOptions = {
+        ...options,
+        challenge: base64urlToUint8Array(options.challenge).slice(0)
+          .buffer as ArrayBuffer,
+        user: {
+          ...options.user,
+          id: base64urlToUint8Array(options.user.id).slice(0)
+            .buffer as ArrayBuffer,
+        },
       };
 
-      // Convert Base64URL to Base64
-      const base64ToBase64Url = (base64url: string): string => {
-        return base64url
-          .replace(/-/g, "+")
-          .replace(/_/g, "/")
-          .padEnd(base64url.length + ((4 - (base64url.length % 4)) % 4), "=");
-      };
-
-      const challengeBase64 = base64ToBase64Url(options.challenge);
-
-      const credential = (await navigator.credentials
-        .create({
-          publicKey: {
-            ...options,
-            challenge: Uint8Array.from(atob(challengeBase64), (c) =>
-              c.charCodeAt(0),
-            ),
-
-            user: {
-              ...options.user,
-              id: Uint8Array.from(String(options.user.id), (c) =>
-                c.charCodeAt(0),
-              ),
-              displayName: "",
-              name: "",
-            },
-            pubKeyCredParams: [
-              { alg: -8, type: "public-key" },
-              { alg: -7, type: "public-key" },
-              { alg: -257, type: "public-key" },
-            ],
-            // rp: { id: 'rc-store.benhalverson.dev', name: "Lulu's Raceshop" },
-            rp: { id: `${DOMAIN}`, name: "Lulu's Raceshop" },
-          },
-        })
-        .catch((err) => {
-          console.error("Error creating credential:", err);
-          setMessage("Error creating credential");
-        })) as PublicKeyCredential | null;
+      const credential = (await navigator.credentials.create({
+        publicKey,
+      })) as PublicKeyCredential | null;
 
       if (!credential) {
         setMessage("User cancelled passkey creation");
         return;
       }
 
+      const attestationResponse =
+        credential.response as AuthenticatorAttestationResponse;
+
       const credentialResponse = {
         id: credential.id,
-        rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
+        rawId: bufferToBase64url(credential.rawId),
         type: credential.type,
         response: {
-          clientDataJSON: btoa(
-            String.fromCharCode(
-              ...new Uint8Array(credential.response.clientDataJSON),
-            ),
+          clientDataJSON: bufferToBase64url(attestationResponse.clientDataJSON),
+          attestationObject: bufferToBase64url(
+            attestationResponse.attestationObject,
           ),
-          attestationObject: btoa(
-            String.fromCharCode(
-              ...new Uint8Array((credential.response as any).attestationObject),
-            ),
-          ),
+          transports: attestationResponse.getTransports
+            ? attestationResponse.getTransports()
+            : [],
         },
+        clientExtensionResults: credential.getClientExtensionResults(),
       };
 
-      const finishRes = await fetch(`${BASE_URL}/webauthn/register/finish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(credentialResponse),
-      });
+      const verifyPayload = {
+        response: credentialResponse,
+        credentialId: credentialResponse.id,
+      };
+
+      const finishRes = await fetch(
+        `${BASE_URL}/api/auth/passkey/verify-registration`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(verifyPayload),
+        },
+      );
 
       if (!finishRes.ok) {
-        setMessage("Finish registration failed");
+        const body = (await finishRes.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+        setMessage(body.message || body.code || "Passkey registration failed");
         return;
       }
 
@@ -161,11 +180,23 @@ const Profile = () => {
       );
     }
   };
-  const handleRemove = async (id: string) => {
-    await fetch(`${BASE_URL}/webauthn/authenticators/${id}`, {
-      method: "DELETE",
+
+  const handleRemove = async (passkeyId: string) => {
+    const res = await fetch(`${BASE_URL}/api/auth/passkey/delete-passkey`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
+      body: JSON.stringify({ id: passkeyId }),
     });
+
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        code?: string;
+      };
+      throw new Error(body.message || body.code || "Failed to remove passkey");
+    }
+
     await getAuthenticators();
   };
 
@@ -201,9 +232,9 @@ const Profile = () => {
       ...profile,
       ...form,
       shippingAddress:
-        (form as any).shippingAddress ||
-        (form as any).address ||
-        (profile as any).shippingAddress ||
+        form.shippingAddress ||
+        form.address ||
+        (profile as ProfileFormData).shippingAddress ||
         profile.address,
     };
     const toastId = toast.loading("Saving profile...");
@@ -218,11 +249,11 @@ const Profile = () => {
       if (!res.ok) {
         let detailsMsg = "Failed to update profile";
         try {
-          const data: any = await res.json();
+          const data = (await res.json()) as ProfileUpdateErrorResponse;
           if (data?.error) detailsMsg = data.error;
           if (data?.details && Array.isArray(data.details)) {
             const list = data.details
-              .map((d: any) => d.message || `${d.path?.join(".")}: ${d.code}`)
+              .map((d) => d.message || `${d.path?.join(".")}: ${d.code}`)
               .join("; ");
             if (list) detailsMsg += `: ${list}`;
           }
@@ -238,9 +269,9 @@ const Profile = () => {
       setForm(updated);
       setIsEditing(false);
       toast.success("Profile updated", { id: toastId });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating profile:", err);
-      const msg = err.message || "Update failed";
+      const msg = err instanceof Error ? err.message : "Update failed";
       setError(msg);
       toast.error(msg, { id: toastId });
     } finally {
@@ -286,10 +317,10 @@ const Profile = () => {
             <Info label="Phone" value={profile.phone} />
             <Info label="First Name" value={profile.firstName} />
             <Info label="Last Name" value={profile.lastName} />
-            {(profile as any).shippingAddress && (
+            {(profile as ProfileFormData).shippingAddress && (
               <Info
                 label="Shipping Address"
-                value={(profile as any).shippingAddress}
+                value={(profile as ProfileFormData).shippingAddress}
               />
             )}
             <Info label="City" value={profile.city} />
@@ -334,9 +365,7 @@ const Profile = () => {
             <InputField
               id="shippingAddress"
               label="Shipping Address"
-              value={
-                (form as any).shippingAddress || (form as any).address || ""
-              }
+              value={form.shippingAddress || form.address || ""}
               onChange={handleChange}
             />
             <InputField
@@ -400,21 +429,27 @@ const Profile = () => {
           </p>
         )}
         <ul className="space-y-2">
-          {authenticators.map((auth: any) => (
+          {authenticators.map((auth, index) => {
+            const passkeyId = auth.id;
+            const credentialId = auth.credentialID || auth.credentialId || auth.id;
+
+            return (
             <li
-              key={auth.credentialId}
+              key={passkeyId || credentialId || `passkey-${index}`}
               className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-              <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
-                {auth.credentialId.slice(0, 18)}...
+              <span className="font-mono text-xs text-white dark:text-gray-300">
+                {credentialId || "Unknown passkey"}
               </span>
               <button
                 type="button"
-                onClick={() => handleRemove(auth.credentialId)}
+                onClick={() => passkeyId && handleRemove(passkeyId)}
+                disabled={!passkeyId}
                 className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
                 Remove
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
     </div>
