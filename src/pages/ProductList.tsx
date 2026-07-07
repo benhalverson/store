@@ -1,48 +1,114 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { Link, useSearchParams } from "react-router-dom";
 import { Pagination } from "../components/Pagination";
 import { BASE_URL } from "../config";
+import type { CategoryResponse } from "../interfaces/category";
 import type {
-  PaginationInfo,
   ProductListResponse,
   ProductResponse,
 } from "../interfaces/productResponse";
 
+const CATALOG_FETCH_LIMIT = 100;
+const DEFAULT_PAGE_SIZE = 5;
+
+function parseCategoryId(value: string | null) {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 function ProductList() {
-  const [products, setProducts] = useState<ProductResponse[]>([]);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 5,
-    totalItems: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [catalog, setCatalog] = useState<ProductResponse[]>([]);
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
   const [loading, setLoading] = useState(false);
 
-  const getData = async (page: number = 1, limit: number = 5) => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `${BASE_URL}/products?page=${page}&limit=${limit}`,
-      );
-      const data = (await response.json()) as ProductListResponse;
+  const selectedCategoryId = parseCategoryId(searchParams.get("categoryId"));
 
-      setProducts(data.products);
-      setPagination(data.pagination);
-    } catch (error) {
-      console.error("error", error);
+  const getData = async () => {
+    setLoading(true);
+    const fetchProducts = async () => {
+      const response = await fetch(
+        `${BASE_URL}/products?page=1&limit=${CATALOG_FETCH_LIMIT}`,
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products (${response.status})`);
+      }
+      const data = (await response.json()) as ProductListResponse;
+      return data.products;
+    };
+
+    const fetchCategories = async () => {
+      const response = await fetch(`${BASE_URL}/categories`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch categories (${response.status})`);
+      }
+      return (await response.json()) as CategoryResponse[];
+    };
+
+    try {
+      const [productResult, categoryResult] = await Promise.allSettled([
+        fetchProducts(),
+        fetchCategories(),
+      ]);
+
+      if (productResult.status === "fulfilled") {
+        setCatalog(productResult.value);
+      } else {
+        console.error("error", productResult.reason);
+        setCatalog([]);
+      }
+
+      if (categoryResult.status === "fulfilled") {
+        setCategories(categoryResult.value);
+      } else {
+        console.error("error", categoryResult.reason);
+        toast.error("Category filters are unavailable right now.");
+        setCategories([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePageChange = (page: number) => {
-    getData(page, pagination.limit);
+  const filteredProducts = useMemo(() => {
+    if (selectedCategoryId === null) return catalog;
+    return catalog.filter(
+      (product) => product.categoryId === selectedCategoryId,
+    );
+  }, [catalog, selectedCategoryId]);
+
+  const totalItems = filteredProducts.length;
+  const totalPages = Math.ceil(totalItems / limit);
+  const currentPage = totalPages === 0 ? 1 : Math.min(page, totalPages);
+  const visibleProducts = useMemo(() => {
+    const start = (currentPage - 1) * limit;
+    return filteredProducts.slice(start, start + limit);
+  }, [currentPage, filteredProducts, limit]);
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
   };
 
-  const handleLimitChange = (limit: number) => {
-    getData(1, limit); // Reset to page 1 when changing limit
+  const handleLimitChange = (nextLimit: number) => {
+    setLimit(nextLimit);
+    setPage(1);
+  };
+
+  const handleCategoryChange = (categoryId: number | null) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (categoryId === null) {
+      nextSearchParams.delete("categoryId");
+    } else {
+      nextSearchParams.set("categoryId", String(categoryId));
+    }
+
+    setPage(1);
+    setSearchParams(nextSearchParams);
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: TODO: useEventEffect in 19
@@ -61,8 +127,36 @@ function ProductList() {
           </div>
         ) : (
           <>
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={selectedCategoryId === null}
+                onClick={() => handleCategoryChange(null)}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  selectedCategoryId === null
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-gray-500"
+                }`}>
+                All
+              </button>
+              {categories.map((category) => (
+                <button
+                  type="button"
+                  key={category.categoryId}
+                  aria-pressed={selectedCategoryId === category.categoryId}
+                  onClick={() => handleCategoryChange(category.categoryId)}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    selectedCategoryId === category.categoryId
+                      ? "border-gray-900 bg-gray-900 text-white"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-500"
+                  }`}>
+                  {category.categoryName}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-              {products.map((product) => (
+              {visibleProducts.map((product) => (
                 <div
                   key={product.id}
                   className="bg-white rounded-lg shadow-md flex flex-col h-full">
@@ -96,16 +190,22 @@ function ProductList() {
               ))}
             </div>
 
-            <Pagination
-              currentPage={pagination.page}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.totalItems}
-              limit={pagination.limit}
-              hasNextPage={pagination.hasNextPage}
-              hasPreviousPage={pagination.hasPreviousPage}
-              onPageChange={handlePageChange}
-              onLimitChange={handleLimitChange}
-            />
+            {totalItems === 0 ? (
+              <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-8 text-center text-gray-600">
+                No products found.
+              </div>
+            ) : (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                hasNextPage={currentPage < totalPages}
+                hasPreviousPage={currentPage > 1}
+                onPageChange={handlePageChange}
+                onLimitChange={handleLimitChange}
+              />
+            )}
           </>
         )}
       </div>
