@@ -13,6 +13,7 @@ interface CartApiItem {
   quantity: number;
   color: string;
   filamentType: string;
+  filamentId: string;
   stripePriceId: string | null;
   price: number;
 }
@@ -53,8 +54,93 @@ interface PaymentIntentResponse {
   orderId?: string | number;
 }
 
+interface CheckoutReadinessErrorItem {
+  cartItemId: number;
+  skuNumber: string | null;
+  reasons: string[];
+}
+
+interface CheckoutReadinessErrorResponse {
+  error: string;
+  items: CheckoutReadinessErrorItem[];
+}
+
+const readinessReasonLabels: Record<string, string> = {
+  product_missing: "product is no longer available",
+  missing_stripe_price_id: "missing checkout price",
+  missing_public_file_service_id: "missing printable file",
+  invalid_quantity: "invalid quantity",
+  invalid_filament_id: "invalid filament selection",
+  unavailable_filament_id: "selected filament is unavailable",
+};
+
 function isObject(val: unknown): val is Record<string, unknown> {
   return typeof val === "object" && val !== null;
+}
+
+function isCheckoutReadinessError(
+  obj: unknown,
+): obj is CheckoutReadinessErrorResponse {
+  if (!isObject(obj) || typeof obj.error !== "string") return false;
+
+  return (
+    Array.isArray(obj.items) &&
+    obj.items.every(
+      (item) =>
+        isObject(item) &&
+        typeof item.cartItemId === "number" &&
+        (typeof item.skuNumber === "string" || item.skuNumber === null) &&
+        Array.isArray(item.reasons) &&
+        item.reasons.every((reason) => typeof reason === "string"),
+    )
+  );
+}
+
+function formatReadinessError(
+  response: CheckoutReadinessErrorResponse,
+  cartItems: CartApiItem[],
+) {
+  const itemMessages = response.items.map((item) => {
+    const cartItem = cartItems.find(
+      (candidate) =>
+        candidate.id === item.cartItemId ||
+        candidate.skuNumber === item.skuNumber,
+    );
+    const itemName =
+      cartItem?.name ?? item.skuNumber ?? `Cart item ${item.cartItemId}`;
+    const reasons = item.reasons
+      .map((reason) => readinessReasonLabels[reason] ?? reason)
+      .join(", ");
+
+    return `${itemName}: ${reasons}`;
+  });
+
+  return `${response.error}. ${itemMessages.join("; ")}`;
+}
+
+async function paymentErrorMessage(res: Response, cartItems: CartApiItem[]) {
+  const text = await res.text();
+  let parsed: unknown = null;
+
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = null;
+    }
+  }
+
+  if (isCheckoutReadinessError(parsed)) {
+    return formatReadinessError(parsed, cartItems);
+  }
+
+  if (isObject(parsed) && typeof parsed.error === "string") {
+    const details =
+      typeof parsed.details === "string" ? `: ${parsed.details}` : "";
+    return `${parsed.error}${details}`;
+  }
+
+  return `Payment intent request failed (${res.status})${text ? `: ${text}` : ""}`;
 }
 
 function parsePaymentIntentResponse(
@@ -102,6 +188,7 @@ export default function Checkout() {
   const [stripeItems, setStripeItems] = useState<StripeLineItem[]>([]);
   const [cartLoading, setCartLoading] = useState(true);
   const [cartError, setCartError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [updatingIdx, setUpdatingIdx] = useState<number | null>(null);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [shippingError, setShippingError] = useState<string | null>(null);
@@ -154,6 +241,7 @@ export default function Checkout() {
   const fetchRemoteCart = async () => {
     setCartLoading(true);
     setCartError(null);
+    setCheckoutError(null);
     try {
       const cartId = localStorage.getItem("cartId");
       if (!cartId) throw new Error("No cartId found");
@@ -226,7 +314,7 @@ export default function Checkout() {
       return;
     }
     setCartLoading(true);
-    setCartError(null);
+    setCheckoutError(null);
     try {
       const res = await fetch(`${BASE_URL}/cart/${cartId}/payment-intent`, {
         method: "POST",
@@ -235,10 +323,7 @@ export default function Checkout() {
         body: JSON.stringify({ shippingInfo, profile }),
       });
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(
-          `Payment intent request failed (${res.status}): ${text}`,
-        );
+        throw new Error(await paymentErrorMessage(res, remoteCart));
       }
       const dataJson: unknown = await res.json();
       const data = parsePaymentIntentResponse(dataJson);
@@ -262,7 +347,7 @@ export default function Checkout() {
         navigate(`/order/${data.orderId}`);
       }
     } catch (err: unknown) {
-      setCartError(
+      setCheckoutError(
         err instanceof Error ? err.message : "Payment intent failed",
       );
     } finally {
@@ -472,6 +557,13 @@ export default function Checkout() {
                 );
               })()}
               <div className="border-t border-gray-200 px-4 py-6 sm:px-6">
+                {checkoutError && (
+                  <div
+                    role="alert"
+                    className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {checkoutError}
+                  </div>
+                )}
                 <button
                   type="submit"
                   className="w-full rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50">

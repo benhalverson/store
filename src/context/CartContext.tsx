@@ -146,6 +146,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     quantity: number;
     color: string;
     filamentType: string;
+    filamentId: string;
   }) => {
     const res = await fetch(`${BASE_URL}/cart/add`, {
       method: "POST",
@@ -188,6 +189,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           quantity: item.quantity,
           color: colorValue,
           filamentType: item.filamentType,
+          filamentId: item.filamentId,
         });
       } catch (err) {
         console.error(err);

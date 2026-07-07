@@ -29,6 +29,39 @@ interface ProfileUpdateErrorResponse {
   details?: ProfileUpdateErrorDetail[];
 }
 
+interface CustomerOrderItem {
+  skuNumber: string | null;
+  name: string | null;
+  quantity: number;
+  color: string | null;
+  filamentType: string | null;
+  image: string | null;
+  price: number | null;
+}
+
+interface CustomerOrder {
+  id: number;
+  orderNumber: string;
+  createdAt: string | null;
+  status: string | null;
+  slantStatus: string | null;
+  totalAmountCents: number | null;
+  currency: string | null;
+  items: CustomerOrderItem[];
+  fulfillment: {
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+    carrier: string | null;
+    shippedAt: string | null;
+    deliveredAt: string | null;
+  };
+  cancellation: { canceledAt: string | null } | null;
+}
+
+interface CustomerOrdersResponse {
+  orders: CustomerOrder[];
+}
+
 // Small internal display component for read-only profile fields
 const Info = ({
   label,
@@ -51,11 +84,38 @@ const Info = ({
   </div>
 );
 
+function formatDate(value: string | null) {
+  if (!value) return "Pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatMoney(cents: number | null, currency: string | null) {
+  if (typeof cents !== "number") return "Pending";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: (currency || "usd").toUpperCase(),
+  }).format(cents / 100);
+}
+
+function orderStatus(order: CustomerOrder) {
+  if (order.cancellation?.canceledAt) return "Canceled";
+  return order.slantStatus || order.status || "Processing";
+}
+
 const Profile = () => {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const [authenticators, setAuthenticators] = useState<PasskeyAuthenticator[]>(
     [],
   );
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
   const [message, setMessage] = useState<string>(""); // kept for passkey flows
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,6 +133,25 @@ const Profile = () => {
       setForm(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load profile");
+    }
+  };
+
+  const getOrders = async () => {
+    setOrdersLoading(true);
+    setOrdersError("");
+    try {
+      const res = await fetch(`${BASE_URL}/orders?limit=10`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      const data = (await res.json()) as CustomerOrdersResponse;
+      setOrders(data.orders || []);
+    } catch (err: unknown) {
+      setOrdersError(
+        err instanceof Error ? err.message : "Failed to load orders",
+      );
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
@@ -214,6 +293,7 @@ const Profile = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: TODO: useEventEffect in 19
   useEffect(() => {
     getProfile();
+    getOrders();
     getAuthenticators();
   }, []);
 
@@ -425,6 +505,116 @@ const Profile = () => {
       <div className="mt-10">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            Orders
+          </h3>
+        </div>
+        {ordersError && (
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+            {ordersError}
+          </div>
+        )}
+        {ordersLoading && (
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Loading orders...
+          </p>
+        )}
+        {!ordersLoading && orders.length === 0 && !ordersError && (
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            No orders yet.
+          </p>
+        )}
+        <div className="space-y-3">
+          {orders.map((order) => {
+            const primaryItem = order.items[0];
+            const extraItemCount = Math.max(order.items.length - 1, 0);
+
+            return (
+              <div
+                key={order.id}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {order.orderNumber}
+                      </span>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        {orderStatus(order)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      {formatDate(order.createdAt)}
+                    </p>
+                  </div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {formatMoney(order.totalAmountCents, order.currency)}
+                  </div>
+                </div>
+
+                {primaryItem && (
+                  <div className="mt-4 flex gap-3">
+                    {primaryItem.image && (
+                      <img
+                        src={primaryItem.image}
+                        alt={
+                          primaryItem.name ||
+                          primaryItem.skuNumber ||
+                          "Order item"
+                        }
+                        className="h-14 w-14 rounded-md object-cover border border-gray-200 dark:border-gray-700"
+                      />
+                    )}
+                    <div className="min-w-0 text-sm">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {primaryItem.name ||
+                          primaryItem.skuNumber ||
+                          "Printed item"}
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Qty {primaryItem.quantity}
+                        {primaryItem.filamentType
+                          ? ` · ${primaryItem.filamentType}`
+                          : ""}
+                        {primaryItem.color ? ` · ${primaryItem.color}` : ""}
+                        {extraItemCount > 0 ? ` · +${extraItemCount} more` : ""}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {(order.fulfillment.trackingNumber ||
+                  order.fulfillment.shippedAt ||
+                  order.fulfillment.deliveredAt) && (
+                  <div className="mt-4 rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200">
+                    {order.fulfillment.trackingUrl ? (
+                      <a
+                        href={order.fulfillment.trackingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-300">
+                        Track shipment
+                      </a>
+                    ) : (
+                      <span className="font-medium">
+                        {order.fulfillment.trackingNumber || "Shipment updated"}
+                      </span>
+                    )}
+                    {order.fulfillment.carrier && (
+                      <span className="ml-2 text-gray-500">
+                        {order.fulfillment.carrier}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
             Passkeys
           </h3>
           <button
@@ -442,23 +632,24 @@ const Profile = () => {
         <ul className="space-y-2">
           {authenticators.map((auth, index) => {
             const passkeyId = auth.id;
-            const credentialId = auth.credentialID || auth.credentialId || auth.id;
+            const credentialId =
+              auth.credentialID || auth.credentialId || auth.id;
 
             return (
-            <li
-              key={passkeyId || credentialId || `passkey-${index}`}
-              className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-              <span className="font-mono text-xs text-white dark:text-gray-300">
-                {credentialId || "Unknown passkey"}
-              </span>
-              <button
-                type="button"
-                onClick={() => passkeyId && handleRemove(passkeyId)}
-                disabled={!passkeyId}
-                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                Remove
-              </button>
-            </li>
+              <li
+                key={passkeyId || credentialId || `passkey-${index}`}
+                className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800">
+                <span className="font-mono text-xs text-white dark:text-gray-300">
+                  {credentialId || "Unknown passkey"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => passkeyId && handleRemove(passkeyId)}
+                  disabled={!passkeyId}
+                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                  Remove
+                </button>
+              </li>
             );
           })}
         </ul>
