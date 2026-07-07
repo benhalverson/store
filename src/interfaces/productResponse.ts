@@ -10,6 +10,7 @@ export interface ProductResponse {
   filamentType: string;
   skuNumber: string;
   color: string;
+  categoryId?: number | null;
   size?: string;
   version?: string;
 }
