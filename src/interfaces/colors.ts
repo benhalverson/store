@@ -2,7 +2,12 @@
  * The response for the /colors endpoint
  */
 export interface ColorsResponse {
-  filament: string;
-  hexColor: string;
-  colorTag: string;
+  name: string;
+  provider: string;
+  public: boolean;
+  available: boolean;
+  profile: string;
+  color: string;
+  hexValue: string;
+  publicId: string;
 }

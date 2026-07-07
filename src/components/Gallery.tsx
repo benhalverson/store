@@ -23,7 +23,8 @@ const Gallery: React.FC<GalleryProps> = ({
     <div className="flex flex-row gap-4 justify-center mt-4">
       {images.map((src, index) => {
         return (
-          <div
+          <button
+            type="button"
             key={`${src}-${index}`}
             className={`relative cursor-pointer rounded-lg overflow-hidden border-2 hover:border-indigo-500 ${
               selectedIndex === index
@@ -38,7 +39,7 @@ const Gallery: React.FC<GalleryProps> = ({
               loading="lazy"
               decoding="async"
             />
-          </div>
+          </button>
         );
       })}
     </div>

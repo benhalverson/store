@@ -23,6 +23,7 @@ export type CartItem = {
   quantity: number;
   color: string;
   filamentType: string;
+  filamentId: string;
   skuNumber: string; // Needed for remote cart API operations
   // Optionally add more fields as needed
 };
