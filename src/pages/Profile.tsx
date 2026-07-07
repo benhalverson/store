@@ -509,7 +509,9 @@ const Profile = () => {
           </h3>
         </div>
         {ordersError && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+          <div
+            role="alert"
+            className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
             {ordersError}
           </div>
         )}
@@ -639,7 +641,7 @@ const Profile = () => {
               <li
                 key={passkeyId || credentialId || `passkey-${index}`}
                 className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm bg-white dark:bg-gray-800">
-                <span className="font-mono text-xs text-white dark:text-gray-300">
+                <span className="font-mono text-xs text-gray-900 dark:text-gray-300">
                   {credentialId || "Unknown passkey"}
                 </span>
                 <button
