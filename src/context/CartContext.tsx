@@ -146,6 +146,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     quantity: number;
     color: string;
     filamentType: string;
+    filamentId: string;
   }) => {
     const res = await fetch(`${BASE_URL}/cart/add`, {
       method: "POST",
@@ -175,6 +176,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error("skuNumber missing – cannot add to cart remotely");
         return;
       }
+      if (!item.filamentId) {
+        console.error("filamentId missing – cannot add to cart remotely");
+        return;
+      }
       const cartId = await ensureCartId();
 
       const previous = optimisticAdd(item);
@@ -188,6 +193,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           quantity: item.quantity,
           color: colorValue,
           filamentType: item.filamentType,
+          filamentId: item.filamentId,
         });
       } catch (err) {
         console.error(err);

@@ -180,7 +180,14 @@ export default function ProductPage() {
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  const selectedColor = state.colorOptions.find(
+                    (colorOption) => colorOption.hexValue === state.color,
+                  );
+                  if (!selectedColor) {
+                    console.error("filamentId missing for selected color");
+                    return;
+                  }
                   addToCart({
                     id: Number(id),
                     name: product.name,
@@ -188,10 +195,11 @@ export default function ProductPage() {
                     color: state.color,
                     quantity,
                     filamentType: selectedFilament,
+                    filamentId: selectedColor.publicId,
                     image: product.image,
                     skuNumber: product.skuNumber,
-                  })
-                }
+                  });
+                }}
                 className="mt-8 flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                 Add to cart
               </button>
