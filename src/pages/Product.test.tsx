@@ -13,7 +13,6 @@ import { vi } from "vitest";
 vi.mock("../config", () => ({
   BASE_URL: "http://test.local",
   DOMAIN: "http://test.local",
-  COLOR_PICKER_VERSION: "v1",
 }));
 
 vi.mock("../components/PreviewComponent", () => ({
@@ -42,7 +41,7 @@ vi.mock("../components/Gallery", () => ({
   ),
 }));
 
-vi.mock("../components/ColorPickerWrapper", () => ({
+vi.mock("../components/ColorPicker", () => ({
   default: ({ filamentType }: { filamentType: string }) => (
     <div data-testid="color-picker">Color Picker for {filamentType}</div>
   ),

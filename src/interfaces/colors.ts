@@ -1,5 +1,5 @@
 /**
- * The response for the /colors endpoint
+ * The color data returned in the /v2/colors response envelope.
  */
 export interface ColorsResponse {
   name: string;

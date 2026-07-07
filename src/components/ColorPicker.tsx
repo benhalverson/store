@@ -4,6 +4,15 @@ import { BASE_URL } from "../config";
 import { useColorContext } from "../context/ColorContext";
 import type { ColorsResponse } from "../interfaces";
 
+type V2ColorsEnvelope = {
+  success: boolean;
+  message: string;
+  data?: ColorsResponse[];
+  count?: number;
+  lastUpdated?: string;
+  error?: string;
+};
+
 const ColorPicker: React.FC<Props> = ({ filamentType }) => {
   const { state, dispatch } = useColorContext();
   const { colorOptions, isLoading, color } = state;
@@ -12,35 +21,23 @@ const ColorPicker: React.FC<Props> = ({ filamentType }) => {
     const fetchColors = async () => {
       dispatch({ type: "SET_IS_LOADING", payload: true });
       try {
-        const url = new URL(`${BASE_URL}/colors`);
-        if (filamentType) url.searchParams.set("filamentType", filamentType);
+        const url = new URL(`${BASE_URL}/v2/colors`);
+        url.searchParams.set("profile", filamentType.toUpperCase());
+        url.searchParams.set("available", "true");
 
         const response = await fetch(url.toString());
+        const json = (await response.json()) as V2ColorsEnvelope;
 
-        // v1 /colors response shape
-        type V1ColorResponse = {
-          filament: string;
-          hexColor: string;
-          colorTag: string;
-        };
+        if (!response.ok || !json.success) {
+          throw new Error(
+            json.message || `Failed to fetch v2 colors (${response.status})`,
+          );
+        }
 
-        const rawColors = (await response.json()) as V1ColorResponse[];
-
-        const mappedColors: ColorsResponse[] = rawColors.map((c) => ({
-          name: c.filament,
-          provider: "", // not provided by v1 API
-          public: true,
-          available: true,
-          profile: c.colorTag,
-          color: c.filament,
-          hexValue: `#${c.hexColor.replace(/^#/, "")}`,
-          publicId: c.colorTag,
-        }));
-
-        console.log("Fetched colors (v1 mapped):", mappedColors);
-        dispatch({ type: "SET_COLOR_OPTIONS", payload: mappedColors });
+        dispatch({ type: "SET_COLOR_OPTIONS", payload: json.data ?? [] });
       } catch (error) {
-        console.error("Failed to fetch colors:", error);
+        console.error("Failed to fetch v2 colors:", error);
+        dispatch({ type: "SET_COLOR_OPTIONS", payload: [] });
       } finally {
         dispatch({ type: "SET_IS_LOADING", payload: false });
       }

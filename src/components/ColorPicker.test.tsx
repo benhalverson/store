@@ -6,18 +6,46 @@ import { ColorProvider } from "../context/ColorContext";
 
 vi.mock("../config", () => ({ BASE_URL: "https://example.test" }));
 
-// v1 /colors mock response shape
-type V1ColorResponse = {
-  filament: string;
-  hexColor: string;
-  colorTag: string;
-};
-
-const mockColors: V1ColorResponse[] = [
-  { filament: "PLA", hexColor: "FF5733", colorTag: "Red" },
-  { filament: "PLA", hexColor: "33FF57", colorTag: "Green" },
-  { filament: "PLA", hexColor: "3357FF", colorTag: "Blue" },
+const mockColors = [
+  {
+    publicId: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    name: "PLA Red",
+    provider: "PolyMaker",
+    profile: "PLA",
+    color: "Red",
+    hexValue: "#FF5733",
+    public: true,
+    available: true,
+  },
+  {
+    publicId: "f47ac10b-58cc-4372-a567-0e02b2c3d480",
+    name: "PLA Green",
+    provider: "PolyMaker",
+    profile: "PLA",
+    color: "Green",
+    hexValue: "#33FF57",
+    public: true,
+    available: true,
+  },
+  {
+    publicId: "f47ac10b-58cc-4372-a567-0e02b2c3d481",
+    name: "PLA Blue",
+    provider: "PolyMaker",
+    profile: "PLA",
+    color: "Blue",
+    hexValue: "#3357FF",
+    public: true,
+    available: true,
+  },
 ];
+
+const mockColorsEnvelope = {
+  success: true,
+  message: "Filaments retrieved successfully",
+  data: mockColors,
+  count: mockColors.length,
+  lastUpdated: "2026-01-25T10:30:00Z",
+};
 
 describe("ColorPicker Component", () => {
   beforeEach(() => {
@@ -27,7 +55,7 @@ describe("ColorPicker Component", () => {
       await new Promise((r) => setTimeout(r, 5)); // tiny async tick
       return {
         ok: true,
-        json: async () => mockColors,
+        json: async () => mockColorsEnvelope,
       } as unknown as Response;
     });
   });
@@ -57,9 +85,24 @@ describe("ColorPicker Component", () => {
     await act(async () => {
       resolveFetch?.({
         ok: true,
-        json: async () => mockColors,
+        json: async () => mockColorsEnvelope,
       } as unknown as Response);
     });
+  });
+
+  it("fetches v2 colors for the selected filament profile", async () => {
+    render(
+      <ColorProvider>
+        <ColorPicker filamentType="PLA" />
+      </ColorProvider>,
+    );
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    const url = new URL(vi.mocked(globalThis.fetch).mock.calls[0][0] as string);
+    expect(url.pathname).toBe("/v2/colors");
+    expect(url.searchParams.get("profile")).toBe("PLA");
+    expect(url.searchParams.get("available")).toBe("true");
   });
 
   it("selects the first color initially after loading", async () => {
