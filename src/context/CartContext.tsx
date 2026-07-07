@@ -176,6 +176,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error("skuNumber missing – cannot add to cart remotely");
         return;
       }
+      if (!item.filamentId) {
+        console.error("filamentId missing – cannot add to cart remotely");
+        return;
+      }
       const cartId = await ensureCartId();
 
       const previous = optimisticAdd(item);
