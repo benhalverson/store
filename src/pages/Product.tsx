@@ -231,6 +231,4 @@ interface Product {
   filamentType: string;
   skuNumber: string;
   color: string;
-  stripeProductId?: string;
-  stripePriceId?: string;
 }
