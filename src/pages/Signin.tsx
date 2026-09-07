@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { BASE_URL } from "../config";
 import { useAuth } from "../context/AuthContext";
@@ -12,8 +12,28 @@ import {
   validateWebAuthnOptionsRpId,
 } from "../utils/webauthn";
 
+function getPostAuthDestination(state: unknown) {
+  if (!state || typeof state !== "object" || !("returnTo" in state)) {
+    return "/profile";
+  }
+
+  const returnTo = (state as { returnTo?: unknown }).returnTo;
+
+  if (
+    typeof returnTo !== "string" ||
+    !returnTo.startsWith("/") ||
+    returnTo.startsWith("//")
+  ) {
+    return "/profile";
+  }
+
+  return returnTo;
+}
+
 const Signin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const postAuthDestination = getPostAuthDestination(location.state);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"password" | "passkey">("password");
   const { fetchUser } = useAuth();
@@ -59,7 +79,7 @@ const Signin = () => {
       }
 
       toast.success("Signed in!", { id: toastId });
-      navigate("/profile");
+      navigate(postAuthDestination, { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
         toast.error(`Login failed: ${err.message}`, { id: toastId });
@@ -176,7 +196,7 @@ const Signin = () => {
       }
 
       toast.success("Passkey login successful!", { id: toastId });
-      navigate("/profile");
+      navigate(postAuthDestination, { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
         toast.error(`Login failed: ${err.message}`, { id: toastId });

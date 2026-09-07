@@ -29,9 +29,18 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-function renderSignin() {
+type SigninInitialEntry =
+  | string
+  | {
+      pathname: string;
+      search?: string;
+      hash?: string;
+      state?: unknown;
+    };
+
+function renderSignin(initialEntry: SigninInitialEntry = "/") {
   const router = createMemoryRouter([{ path: "/", element: <SigninPage /> }], {
-    initialEntries: ["/"],
+    initialEntries: [initialEntry],
   });
   render(<RouterProvider router={router} />);
 }
@@ -66,7 +75,33 @@ describe("Signin – password tab", () => {
     );
 
     await waitFor(() => expect(mockFetchUser).toHaveBeenCalledTimes(1));
-    expect(mockNavigate).toHaveBeenCalledWith("/profile");
+    expect(mockNavigate).toHaveBeenCalledWith("/profile", { replace: true });
+  });
+
+  it("navigates to the protected page that sent the customer to signin", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    } as Response);
+    mockFetchUser.mockResolvedValueOnce({ email: "user@example.com" });
+
+    renderSignin({
+      pathname: "/",
+      state: { returnTo: "/checkout?step=shipping" },
+    });
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/password/i), "password123");
+    await user.click(
+      screen.getByRole("button", { name: /sign in with password/i }),
+    );
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/checkout?step=shipping", {
+        replace: true,
+      }),
+    );
   });
 
   it("shows backend error message on failed sign-in", async () => {
@@ -231,6 +266,6 @@ describe("Signin – passkey tab", () => {
       credentialId: "cred-id-base64url",
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith("/profile");
+    expect(mockNavigate).toHaveBeenCalledWith("/profile", { replace: true });
   });
 });

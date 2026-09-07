@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { ColorProvider } from "./context/ColorContext";
@@ -37,11 +38,14 @@ function App() {
                 <Route path="search" element={<SearchResults />} />
                 <Route path="signup" element={<Signup />} />
                 <Route path="signin" element={<Signin />} />
-                <Route path="profile" element={<Profile />} />
                 <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/payment" element={<Payment />} />
                 <Route path="/order/complete" element={<OrderComplete />} />
+
+                <Route element={<ProtectedRoute />}>
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/payment" element={<Payment />} />
+                </Route>
 
                 {/* Route to ProductPage with a dynamic product ID */}
                 <Route path="product/:id" element={<ProductPage />} />
