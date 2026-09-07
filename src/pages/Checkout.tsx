@@ -2,6 +2,7 @@ import { ChevronDownIcon } from "@heroicons/react/16/solid";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import InputField from "../components/InputField";
+import { SquarePaymentForm } from "../components/SquarePaymentForm";
 import { BASE_URL } from "../config";
 import { useCart } from "../context/CartContext";
 
@@ -14,7 +15,6 @@ interface CartApiItem {
   color: string;
   filamentType: string;
   filamentId: string;
-  stripePriceId: string | null;
   price: number;
 }
 
@@ -23,161 +23,8 @@ interface CartApiResponse {
   total: number;
 }
 
-interface StripeLineItem {
-  price: string; // Stripe price ID
-  quantity: number;
-  price_data?: {
-    currency: string;
-    product_data: {
-      name: string;
-    };
-    unit_amount: number;
-  };
-}
-
-interface StripeItemsResponse {
-  line_items: StripeLineItem[];
-  total_amount?: number;
-}
-
 interface ShippingCostResponse {
   shippingCost: number;
-}
-
-interface PaymentIntentResponse {
-  checkout_url?: string;
-  // API returns `clientSecret` (camelCase); accept `client_secret` as well for compatibility
-  clientSecret?: string;
-  client_secret?: string;
-  amount?: number;
-  currency?: string;
-  orderId?: string | number;
-}
-
-interface CheckoutReadinessErrorItem {
-  cartItemId: number;
-  skuNumber: string | null;
-  reasons: string[];
-}
-
-interface CheckoutReadinessErrorResponse {
-  error: string;
-  items: CheckoutReadinessErrorItem[];
-}
-
-const readinessReasonLabels: Record<string, string> = {
-  product_missing: "product is no longer available",
-  missing_stripe_price_id: "missing checkout price",
-  missing_public_file_service_id: "missing printable file",
-  invalid_quantity: "invalid quantity",
-  invalid_filament_id: "invalid filament selection",
-  unavailable_filament_id: "selected filament is unavailable",
-};
-
-function isObject(val: unknown): val is Record<string, unknown> {
-  return typeof val === "object" && val !== null;
-}
-
-function isCheckoutReadinessError(
-  obj: unknown,
-): obj is CheckoutReadinessErrorResponse {
-  if (!isObject(obj) || typeof obj.error !== "string") return false;
-
-  return (
-    Array.isArray(obj.items) &&
-    obj.items.every(
-      (item) =>
-        isObject(item) &&
-        typeof item.cartItemId === "number" &&
-        (typeof item.skuNumber === "string" || item.skuNumber === null) &&
-        Array.isArray(item.reasons) &&
-        item.reasons.every((reason) => typeof reason === "string"),
-    )
-  );
-}
-
-function formatReadinessError(
-  response: CheckoutReadinessErrorResponse,
-  cartItems: CartApiItem[],
-) {
-  const itemMessages = response.items.map((item) => {
-    const cartItem = cartItems.find(
-      (candidate) =>
-        candidate.id === item.cartItemId ||
-        candidate.skuNumber === item.skuNumber,
-    );
-    const itemName =
-      cartItem?.name ?? item.skuNumber ?? `Cart item ${item.cartItemId}`;
-    const reasons = item.reasons
-      .map((reason) => readinessReasonLabels[reason] ?? reason)
-      .join(", ");
-
-    return `${itemName}: ${reasons}`;
-  });
-
-  return `${response.error}. ${itemMessages.join("; ")}`;
-}
-
-async function paymentErrorMessage(res: Response, cartItems: CartApiItem[]) {
-  const text = await res.text();
-  let parsed: unknown = null;
-
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = null;
-    }
-  }
-
-  if (isCheckoutReadinessError(parsed)) {
-    return formatReadinessError(parsed, cartItems);
-  }
-
-  if (isObject(parsed) && typeof parsed.error === "string") {
-    const details =
-      typeof parsed.details === "string" ? `: ${parsed.details}` : "";
-    return `${parsed.error}${details}`;
-  }
-
-  return `Payment intent request failed (${res.status})${text ? `: ${text}` : ""}`;
-}
-
-function parsePaymentIntentResponse(
-  obj: unknown,
-): PaymentIntentResponse | null {
-  if (!isObject(obj)) return null;
-  const record = obj as Record<string, unknown>;
-  const checkout_url =
-    typeof record.checkout_url === "string" ? record.checkout_url : undefined;
-  const clientSecret =
-    typeof record.clientSecret === "string" ? record.clientSecret : undefined;
-  const client_secret =
-    typeof record.client_secret === "string" ? record.client_secret : undefined;
-  const amount = typeof record.amount === "number" ? record.amount : undefined;
-  const currency =
-    typeof record.currency === "string" ? record.currency : undefined;
-  const orderId =
-    typeof record.orderId === "string" || typeof record.orderId === "number"
-      ? (record.orderId as string | number)
-      : undefined;
-  if (
-    checkout_url ||
-    clientSecret ||
-    client_secret ||
-    amount ||
-    currency ||
-    orderId
-  )
-    return {
-      checkout_url,
-      clientSecret,
-      client_secret,
-      amount,
-      currency,
-      orderId,
-    };
-  return null;
 }
 
 export default function Checkout() {
@@ -185,7 +32,6 @@ export default function Checkout() {
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   const { updateQuantity } = useCart();
   const [remoteCart, setRemoteCart] = useState<CartApiItem[]>([]);
-  const [stripeItems, setStripeItems] = useState<StripeLineItem[]>([]);
   const [cartLoading, setCartLoading] = useState(true);
   const [cartError, setCartError] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -255,24 +101,6 @@ export default function Checkout() {
 
       setRemoteCart(cartData.items);
 
-      try {
-        const stripeRes = await fetch(
-          `${BASE_URL}/cart/${cartId}/stripe-items`,
-          {
-            credentials: "include",
-          },
-        );
-        if (stripeRes.ok) {
-          const stripeData: StripeItemsResponse = await stripeRes.json();
-          setStripeItems(stripeData.line_items);
-        } else {
-          console.warn(
-            "Stripe items not available - some items may not have Stripe price IDs",
-          );
-        }
-      } catch (stripeError) {
-        console.warn("Failed to fetch Stripe items:", stripeError);
-      }
     } catch (e) {
       setCartError(e instanceof Error ? e.message : "Failed to load cart");
       setRemoteCart([]);
@@ -306,55 +134,6 @@ export default function Checkout() {
     setShippingCost(data.shippingCost);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const cartId = localStorage.getItem("cartId");
-    if (!cartId) {
-      setCartError("No cartId found");
-      return;
-    }
-    setCartLoading(true);
-    setCheckoutError(null);
-    try {
-      const res = await fetch(`${BASE_URL}/cart/${cartId}/payment-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ shippingInfo, profile }),
-      });
-      if (!res.ok) {
-        throw new Error(await paymentErrorMessage(res, remoteCart));
-      }
-      const dataJson: unknown = await res.json();
-      const data = parsePaymentIntentResponse(dataJson);
-
-      if (!data) {
-        console.warn("Unexpected payment intent response:", dataJson);
-        throw new Error("Invalid payment intent response");
-      }
-      // If backend provides a checkout URL, redirect there
-      if (data.checkout_url) {
-        navigate(data.checkout_url);
-        return;
-      }
-      const clientSecret = data.clientSecret ?? data.client_secret;
-      if (clientSecret) {
-        navigate(`/payment`, { state: { clientSecret } });
-        return;
-      }
-      // Fallback: optionally navigate if order id provided
-      if (data.orderId) {
-        navigate(`/order/${data.orderId}`);
-      }
-    } catch (err: unknown) {
-      setCheckoutError(
-        err instanceof Error ? err.message : "Payment intent failed",
-      );
-    } finally {
-      setCartLoading(false);
-    }
-  };
-
   // biome-ignore lint/correctness/useExhaustiveDependencies: TODO: useEventEffect in 19
   useEffect(() => {
     getProfileData();
@@ -381,7 +160,7 @@ export default function Checkout() {
 
         <form
           className="lg:grid lg:grid-cols-2 lg:gap-x-12 xl:gap-x-16"
-          onSubmit={handleSubmit}>
+          onSubmit={(event) => event.preventDefault()}>
           {/* Shipping info for estimating shipping cost */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -564,15 +343,13 @@ export default function Checkout() {
                     {checkoutError}
                   </div>
                 )}
-                <button
-                  type="submit"
-                  className="w-full rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50">
-                  Confirm order
-                </button>
-                {stripeItems.length > 0 && (
-                  <p className="mt-2 text-xs text-gray-500 text-center">
-                    {stripeItems.length} item(s) ready for Stripe checkout
-                  </p>
+                {localStorage.getItem("cartId") && (
+                  <SquarePaymentForm
+                    cartId={localStorage.getItem("cartId") ?? ""}
+                    customerEmail={profile?.email}
+                    disabled={remoteCart.length === 0}
+                    onError={setCheckoutError}
+                  />
                 )}
               </div>
             </div>
